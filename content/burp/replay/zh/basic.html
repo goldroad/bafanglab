@@ -1,0 +1,76 @@
+<h4>漏洞描述</h4>
+<p>重放攻击：接口依赖一次性 token/验证码防重放，但服务端并未真正"消费"该凭证（未入库、未标记、未绑定会话），导致同一请求可以被原样重复提交。</p>
+<h4>挖掘技巧与经验</h4>
+<ul>
+<li>抓取一次性操作（转账、下单、领券、改密）的请求，发送到 Repeater 连续点两次 Send。</li>
+<li>观察第二次是否仍返回成功；对比响应中的 token 是否变化、是否提示已使用。</li>
+<li>并发重放：用 Intruder 或 Turbo Intruder 同时发送多个相同请求，测试"先检查后扣减"的竞态问题。</li>
+<li>注意时间戳、nonce、幂等键是否真的参与校验。</li>
+</ul>
+
+<h4>Token 专题：本关说的是"防重放令牌"</h4>
+<p>本关出现的 <code>token</code> 是<b>防重放令牌</b>（anti-replay token，也叫 nonce / one-time token）。它只回答一个问题：<b>这条业务请求是不是第一次提交？</b>它<b>不是</b>登录会话 token（用于识别"你是谁"）、<b>不是</b> CSRF Token（用于识别"请求是不是你自愿发的"），也<b>不是</b> API 里的 Bearer Token（用于接口鉴权）。三者名字都叫 token，但语义完全不同，排查时不要混为一谈。</p>
+<ul>
+<li><b>绑定对象：</b>某一次业务操作（本关是一次转账），而不是整个会话。</li>
+<li><b>生命周期：</b>一次有效，成功提交后立即作废，并换发新的 token。</li>
+<li><b>客户端位置：</b>本关放在隐藏表单字段 <code>token</code> 里，随 POST body 一起提交到接口；也可以是请求头（如 <code>X-Nonce</code>、<code>Idempotency-Key</code>）。</li>
+</ul>
+
+<h4>与 CSRF Token 的关系（同源不同目标）</h4>
+<p>两者可以复用同一套生成机制（随机数 + 会话绑定 + 签名），但防御目标和校验时机不同，数据库/缓存中的存储与"消费"规则也必须分开实现。</p>
+<table class="chk-table">
+<tr><th>对比项</th><th>防重放 Token（本关）</th><th>CSRF Token</th></tr>
+<tr><td>防御目标</td><td>同一条合法请求被重复提交（重放、并发重复扣款）</td><td>第三方站点伪造用户身份发起请求（跨站请求伪造）</td></tr>
+<tr><td>绑定对象</td><td>一次业务操作 / 单个 nonce，请求之间不通用</td><td>用户会话（session），通常整场会话通用或按表单轮换</td></tr>
+<tr><td>是否可复用</td><td>一次性，用过即废</td><td>同一会话内通常可反复使用（部分实现按表单/页面轮换）</td></tr>
+<tr><td>校验时机</td><td>业务执行前校验，并在执行时原子消费（防并发双花）</td><td>请求进入业务逻辑前，与会话中的值比对</td></tr>
+<tr><td>校验失败结果</td><td>判定为重放，拒绝本次操作</td><td>判定为 CSRF，拒绝本次请求</td></tr>
+<tr><td>能否共用生成机制</td><td colspan="2">可以共用随机数 + 会话绑定 + HMAC 签名；但存储位置、有效期与消费语义必须分开，不能用一个值同时承担两种职责</td></tr>
+</table>
+
+<h4>服务端如何生成、存在哪里、有效期多久</h4>
+<ul>
+<li><b>随机 + 绑定 + 签名：</b>随机串 + 时间戳 + 用户/会话 ID + 服务端密钥 HMAC，服务端可离线验签并判断时间窗。</li>
+<li><b>一次性序号计数器：</b>服务端维护单调递增序号，客户端回传序号，小于等于已处理序号即视为重放。</li>
+<li><b>存储位置：</b>服务端 session、Redis/缓存或数据库，记录 token 值、所属用户、创建时间、是否已用。</li>
+<li><b>有效期：</b>时间窗（如 5 分钟）+ 一次性消费；过期或已用都拒绝。</li>
+</ul>
+<p><b>本关代码的实际生成方式（对照 <code>modules/burp/replay.php</code> 与 <code>modules/burp/api/ex4.php</code>）：</b></p>
+<pre>
+// 页面初始化与接口共用同一组 session 键
+if (!isset($_SESSION['used_tokens'])) { $_SESSION['used_tokens'] = array(); }
+if (!isset($_SESSION['replay_token'])) { $_SESSION['replay_token'] = md5(uniqid('', true)); }
+
+// modules/burp/replay.php：token 放进隐藏字段，随 POST body 提交
+&lt;input type="hidden" name="token" id="tkField" value="&lt;?php echo $cur_token; ?&gt;"&gt;
+</pre>
+<p>实际用的是 <code>md5(uniqid('', true))</code> 生成的 32 位十六进制随机串，<b>没有时间戳、没有 HMAC 签名、没有绑定用户或金额</b>，只存放在当前 PHP session 的 <code>$_SESSION['replay_token']</code> 与 <code>$_SESSION['used_tokens']</code> 数组里，也没有过期时间。这正是靶场故意保留的简化实现。</p>
+
+<h4>服务端如何识别重放</h4>
+<ul>
+<li><b>已用 token 黑名单 / 一次性消费：</b>命中已用列表即拒绝。</li>
+<li><b>时间窗校验：</b>token 内含时间戳，超出窗口即过期。</li>
+<li><b>序号单调递增：</b>收到的序号不大于服务端已处理序号即重放。</li>
+<li><b>签名校验：</b>HMAC/签名不匹配即视为伪造，直接拒绝。</li>
+<li><b>nonce 唯一性检测：</b>同一 nonce 第二次出现直接判定重放。</li>
+</ul>
+<p><b>本关的判定逻辑（对照 <code>modules/burp/api/ex4.php</code> 实际代码，不臆造）：</b></p>
+<pre>
+$token = isset($_POST['token']) ? $_POST['token'] : '';
+if ($token === '') {                       // 未带 token：直接拒绝
+    echo "status=fail\n"; exit;
+}
+
+if (in_array($token, $_SESSION['used_tokens'], true)) {
+    // 第二次提交同一个 token：判定为重放
+    echo "status=replay\n";
+} else {
+    // 首次使用：记录到已用列表，并换发新 token
+    $_SESSION['used_tokens'][] = $token;
+    $_SESSION['replay_token'] = md5(uniqid('', true));
+    echo "status=ok\n";
+    echo "nextToken=" . $_SESSION['replay_token'] . "\n";
+}
+</pre>
+<p>也就是说，本关<b>只实现了"已用列表 + 一次性消费"这一种判定</b>：没有时间窗、没有签名校验、没有序号，也没有校验 token 是否由服务端签发。因此任意自造的 token 只要不重复提交也能通过，这属于靶场故意留下的缺陷，正是重放/并发测试要关注的点。</p>
+<p><b>正常操作 vs 重放：</b>页面每次转账成功后会同步更新隐藏字段并显示新 token，正常点击不会误判；只有把同一条 POST 请求（同一个 token）原样重发，才会看到 <code>status=replay</code> 与"检测到重放攻击"的提示。</p>

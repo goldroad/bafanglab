@@ -1,0 +1,12 @@
+<div class="hint-thought">
+<h4>思路提示</h4>
+<p>本关是<b>业务逻辑漏洞</b>——服务端直接信任客户端提交的商品价格。购买请求是 POST，请求体里带了价格字段。在 Burp 中拦截购买请求，把价格字段改成一个极小的值（如 1 分钱）再放行。关键理解：价格、数量、金额这类业务字段绝不能由客户端说了算。</p>
+</div>
+<details class="hint-detail">
+<summary>详细解题过程（点击展开）</summary>
+<div>
+拦截购买请求，修改请求体中的 <code>price=9999</code> 为 <code>price=0.01</code>。<br>
+<b>接口地址：</b><code>POST modules/burp/api/ex2.php</code><br>
+<b>代理设置：</b>浏览器代理指向 <code>127.0.0.1:8080</code>，Burp &rarr; Proxy &rarr; Intercept is on。
+</div>
+</details>

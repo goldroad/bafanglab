@@ -1,0 +1,14 @@
+<h4>漏洞描述</h4>
+<p>SQL 注入指程序把用户输入直接拼接进 SQL 语句，导致攻击者可以改变查询语义、读取任意表数据，甚至执行系统命令。本关为数字型 GET 注入：<code>WHERE id = $id</code>，参数前后没有引号包裹。</p>
+<h4>漏洞危害</h4>
+<p>SQL 注入是危害最严重的 Web 漏洞之一：攻击者可拖取整库数据（用户、订单、支付信息），酿成千万级数据泄露事件；可构造语句绕过登录直进后台；权限较高时还能读写服务器文件（into outfile）植入 WebShell，甚至借 xp_cmdshell 执行系统命令拿下整台服务器。大量真实数据泄露事件的源头只是一处 SQL 注入。</p>
+<h4>挖掘技巧与经验</h4>
+<ul>
+<li>分类判断：数字型用 <code>and 1=1</code> / <code>and 1=2</code>；字符型先用 <code>'</code> 看是否报错，再 <code>and 1=1' </code>。</li>
+<li>标准流程：判注入 → <code>order by</code> 猜字段数 → <code>union select</code> 找显示位 → 爆库表列 → 取数据。</li>
+<li>页面无回显时考虑报错注入（<code>updatexml</code>/<code>extractvalue</code>）、布尔盲注、时间盲注。</li>
+<li>实战中注意 WAF：注释符变形 <code>/**/</code>、大小写混写、<code>union%0aselect</code> 换行、URL 二次编码。</li>
+<li>sqlmap 能自动跑，但建议先手工跑通一遍，理解每种 payload 的返回差异。</li>
+</ul>
+<h4>更多练习场景</h4>
+<p>如果需要练习更多场景，请安装 sqli-labs 靶场：<a href="https://github.com/skyblueee/sqli-labs-php7" target="_blank" rel="noopener noreferrer">https://github.com/skyblueee/sqli-labs-php7</a></p>

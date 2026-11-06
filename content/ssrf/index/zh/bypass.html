@@ -1,0 +1,8 @@
+<h4>绕过技巧</h4>
+<ul>
+<li><b>IP 黑名单</b>：<code>127.0.0.1</code> 的变形 <code>127.1</code>、<code>0.0.0.0</code>、<code>localhost</code>、<code>[::1]</code>、<code>127.0.0.1.example.com</code>（域名解析到内网）。</li>
+<li><b>URL 解析差异</b>：<code>http://允许的域名@127.0.0.1/</code>、<code>http://127.0.0.1#@allowed.com</code>、<code>//127.0.0.1</code>、路径参数 <code>/redirect?url=</code>。</li>
+<li><b>只校验开头/结尾</b>：<code>http://127.0.0.1.attacker.com</code> 或 <code>http://attacker.com/127.0.0.1</code> 试探正则匹配位置。</li>
+<li><b>302 跳转绕过</b>：自己服务器返回 302 指向内网地址，服务端未逐跳校验时生效。</li>
+<li><b>协议走私</b>：<code>gopher://</code> 打 Redis/MySQL/内网 HTTP、<code>dict://</code> 探端口、<code>file://</code> 读本地文件。</li>
+</ul>

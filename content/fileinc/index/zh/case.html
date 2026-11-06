@@ -1,0 +1,15 @@
+<table class="case-table">
+<thead>
+<tr><th>位置</th><th>影响</th></tr>
+</thead>
+<tbody>
+<tr>
+<td><code>/index/ajax/lang?lang=../../application/database</code></td>
+<td>ThinkPHP 多语言文件包含（CVE-2024-7928），以 JSON 返回 application/database.php 内容，读取到生产 MySQL 连接配置（16 位随机强口令，为当前生产有效凭据）</td>
+</tr>
+<tr>
+<td><code>/api/invoice/download?pdf=</code>（<code>file_get_contents($request-&gt;input('pdf'))</code>）</td>
+<td>LFI 任意文件读取，已读 /etc/passwd 及完整 Laravel .env：数据库凭据、Stripe LIVE 密钥、阿里云 OSS 凭据、微信 secret、APP_KEY</td>
+</tr>
+</tbody>
+</table>

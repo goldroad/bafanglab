@@ -1,0 +1,7 @@
+<h4>绕过技巧</h4>
+<ul>
+<li><b>代码被压缩/混淆</b>：用格式化工具还原缩进后再搜；有 <code>.js.map</code> 时可直接还原源码。</li>
+<li><b>关键字被拆开</b>：分别搜 <code>access</code>、<code>secret</code>、<code>LTAI</code>、<code>oss</code>，再搜 base64 与长串随机字符。</li>
+<li><b>前端加密了配置</b>：在 DevTools 断点跟踪解密函数，或直接调用前端已有的签名/上传接口重放。</li>
+<li><b>源码被删但接口还在</b>：用 Wayback Machine、CDN 缓存、旧版本 bundle 找历史文件。</li>
+</ul>

@@ -1,0 +1,8 @@
+<h4>绕过技巧</h4>
+<ul>
+<li><b>只过滤了 <code>{{ }}</code></b>：尝试其它定界符 <code>{$ ... }</code>、<code>&lt;?= ... ?&gt;</code>，或用 <code>}}{{</code> 闭合再构造。</li>
+<li><b>关键字黑名单（过滤 system / exec）</b>：换用 <code>popen</code>、<code>shell_exec</code>、<code>passthru</code>、<code>proc_open</code>；或用字符串拼接绕过：<code>('sys'.'tem')('id')</code>。</li>
+<li><b>过滤了 PHP 标签</b>：SSTI 不需要 <code>&lt;?php</code>，模板引擎本身就跑在 PHP 里。</li>
+<li><b>沙箱引擎</b>：顺着对象属性链找可利用的方法（如 Twig 的 <code>{{_self.env...}}</code>），或寻找暴露 callable 的 gadget。</li>
+<li>延伸练习：<b>PayloadsAllTheThings - SSTI</b>、<b>PortSwigger Web Security Academy - SSTI</b> 专题。</li>
+</ul>

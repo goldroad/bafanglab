@@ -1,0 +1,57 @@
+# bafanglab - Web 漏洞靶场 Docker Compose 编排
+# 版权所有：八方网域-无涯
+#
+# 用法：
+#   bash deploy.sh                   一键部署（推荐）
+#   docker compose up -d --build     构建并启动
+#   docker compose down              停止
+#
+# 访问：
+#   http://<宿主机IP>/               靶场首页
+#   http://<宿主机IP>/install.php    安装/重置
+#   http://<宿主机IP>/check.php      环境自检
+#
+# 路径约定：宿主机项目目录 = 容器内 /opt/bafanglab（整体 bind mount），
+# 宿主机与容器内绝对路径完全一致，test_all.py 的路径型 payload 直接可用。
+services:
+  web:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    image: bafanglab:1.0.0
+    container_name: bafanglab-web
+    ports:
+      - "80:80"
+    environment:
+      DB_HOST: db
+      DB_USER: root
+      DB_PASS: root
+      DB_NAME: bafanglab
+    volumes:
+      # 整个项目目录挂载进容器，路径与宿主机一致
+      - ./:/opt/bafanglab
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  db:
+    image: mariadb:10.11
+    container_name: bafanglab-db
+    environment:
+      MARIADB_ROOT_PASSWORD: root
+      MARIADB_DATABASE: bafanglab
+    volumes:
+      - ./data/mysql:/var/lib/mysql
+      # INTO OUTFILE / LOAD_FILE 专用目录：与 web 容器/宿主机同路径共享
+      # （secure_file_priv 已在 docker/mysql/conf.d/bafanglab.cnf 指向该绝对路径）
+      - ./modules/sqli/files:/opt/bafanglab/modules/sqli/files
+      - ./docker/mysql/conf.d:/etc/mysql/conf.d:ro
+    ports:
+      - "3306:3306"
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    restart: unless-stopped

@@ -1,0 +1,7 @@
+<h4>修复方法</h4>
+<ul>
+<li>禁用 DTD 与外部实体：PHP 使用 <code>libxml_disable_entity_loader(true)</code>（PHP&lt;8.0）或不加 <code>LIBXML_NOENT</code>；Java 设置 <code>FEATURE_SECURE_PROCESSING</code> 并关闭 DTD。</li>
+<li>能用 JSON 就不用 XML；必须解析 XML 时使用安全配置的现代解析器。</li>
+<li>对解析出的内容按不可信数据处理，过滤 <code>&lt;!DOCTYPE</code>、<code>&lt;!ENTITY</code> 关键字（辅助手段，非根治）。</li>
+<li>限制 XML 解析服务器出网能力，降低 XXE 转 SSRF 的杀伤面。</li>
+</ul>

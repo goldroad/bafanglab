@@ -1,0 +1,7 @@
+<h4>修复方法</h4>
+<ul>
+<li>使用参数化查询（PDO/MySQLi prepared statement），从根上杜绝拼接。</li>
+<li>对数字型参数强制类型转换（<code>intval</code>），并做白名单校验。</li>
+<li>数据库账号最小权限，禁止普通业务账号拥有 DROP/FILE 等权限。</li>
+<li>关闭详细错误回显（生产环境 <code>display_errors=Off</code>），避免报错注入与信息泄露。</li>
+</ul>

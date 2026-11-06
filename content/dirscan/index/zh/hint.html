@@ -1,0 +1,31 @@
+<div class="hint-thought">
+<h4>思路提示</h4>
+<p>目录扫描的核心是<b>通过 HTTP 状态码差异判断路径是否存在</b>。思路：先用工具（dirsearch / ffuf）挂上字典批量探测，再根据返回的状态码判断哪些路径有东西。重点关注 <b>301</b>（目录存在，自动补斜杠）、<b>403</b>（路径存在但禁止访问）、<b>200</b>（直接访问到内容）。本关藏了若干敏感文件，包括 .git 仓库、编辑器残留 .bak 等，逐个找到它们。</p>
+</div>
+<details class="hint-detail">
+<summary>详细解题过程（点击展开）</summary>
+<div>
+<b>推荐工具：</b><br>
+<code>dirsearch -u <?php echo site_base_url(); ?>/ -e php,txt,sql,zip,bak</code><br>
+<code>ffuf -u <?php echo site_base_url(); ?>/FUZZ -w dict_dirs.txt</code><br>
+<b>字典关键字：</b>backup、admin、admin_area、test、uploads、robots.txt、install.php、config、config.php.bak、.git<br>
+<b>现成字典：</b>本页上方可下载 <code>dict_dirs.txt</code>，内含全部目标路径，可直接用作扫描字典。<br>
+<b>线索：</b>先看 <code><?php echo BASE_URL; ?>/robots.txt</code>，Disallow 里往往写着敏感目录。<br>
+<b>目标5 - 编辑器残留泄露（config.php.bak）：</b><br>
+IDE（VS Code / PHPStorm / Vim）在崩溃恢复或定时备份时会自动生成 .bak / .old / ~ 文件。<br>
+这些文件<b>不会被 PHP 解析</b>，直接返回原始源码。关注文件名模式 <code>*.php.bak</code>、<code>*.php~</code>、<code>*.bak</code>。<br>
+<b>目标6 - 响应码识别速记：</b><br>
+• <b>301</b> = 路径是个目录，浏览器自动补斜杠 → 路径存在<br>
+• <b>403</b> = 路径存在但禁止访问（目录浏览关闭 / .git / .htaccess 被保护）<br>
+• <b>404</b> = 不存在；本靶场 phpStudy 环境的 404 页固定约 2659 字节（其他环境的 404 页大小不同，以 Content-Length 为准）<br>
+<b>目标4 - .git 信息泄露（backup/.git）：</b><br>
+1. 浏览器访问 <code><?php echo BASE_URL; ?>/backup/.git/HEAD</code>，返回 <code>ref: refs/heads/master</code> 即确认泄露<br>
+2. 访问 <code><?php echo BASE_URL; ?>/backup/.git/logs/HEAD</code> 看明文提交记录（若浏览器下载/乱码，用 Burp 查看或另存后按 UTF-8 打开）<br>
+3. 注意最后一次提交叫"删除敏感文件"——但历史还在！<br>
+4. 用 <b>GitHack / git-dumper</b> 拖下整个仓库，然后：<br>
+<code>git --git-dir=.git log --oneline</code><br>
+<code>git --git-dir=.git show HEAD~1:secret.txt</code> &rarr; 拿到通关凭证<br>
+<code>git --git-dir=.git show HEAD~2:db_config.php</code> &rarr; 拿到开发库口令<br>
+5. 纯手工玩法：从 logs/HEAD 取提交 sha1，按 <code>objects/前2位/后38位</code> 下载对象，zlib 解压后按 commit→tree→blob 逐级解析出文件内容。
+</div>
+</details>

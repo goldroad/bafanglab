@@ -1,0 +1,15 @@
+<div class="hint-thought">
+<h4>思路提示</h4>
+<p>本关考察<b>未授权访问</b>——前端登录页要求登录，但后端数据接口可能没做校验。思路：先从前端 JS 里找到内部接口的路由地址（搜索 API 相关常量），然后换一个无痕窗口（确保没有登录态）直接在地址栏访问那个接口。如果接口直接返回数据，说明未授权。通关凭证就在返回的 JSON 里。</p>
+</div>
+<details class="hint-detail">
+<summary>详细解题过程（点击展开）</summary>
+<div>
+<b>第 1 步：</b>打开登录页，按 F12 &rarr; Network（或 Sources），找到页面加载的前端资源 <code>app.js</code>。<br>
+<b>第 2 步：</b>在 <code>app.js</code> 里搜索 <code>API_ROUTES</code>，可以看到内部接口路由：<code>userList</code> = <code>{{BASE}}/modules/jsleak/api/users.php</code>。<br>
+<b>第 3 步：</b>换一个无痕窗口（确保没有登录态），直接在地址栏访问：<code>{{SITE}}/modules/jsleak/api/users.php</code>。<br>
+<b>第 4 步：</b>接口原样返回 JSON，<code>data</code> 数组第 1 条是 <code>admin</code>，其 <code>remark</code> 字段中就是通关凭证。<br>
+<b>Burp 验证：</b>Proxy 抓到该请求 &rarr; 右键 Send to Repeater &rarr; 删除请求头里的 <code>Cookie</code> &rarr; Send，仍然返回 <code>200</code> 与全部数据，说明接口没做任何鉴权。<br>
+<b>补充：</b>前台登录永远失败，正是要你意识到"前端登录失败 ≠ 后端接口有校验"，别被登录页挡住。
+</div>
+</details>

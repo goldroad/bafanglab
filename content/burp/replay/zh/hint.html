@@ -1,0 +1,13 @@
+<div class="hint-thought">
+<h4>思路提示</h4>
+<p>本关练习<b>重放攻击</b>的识别。转账接口带了一次性 token，正常流程下同一笔请求不能重复提交。思路是：抓一次正常转账请求，放到 Repeater 里<b>原样重发两次</b>，观察服务器第二次如何响应。重点体会「一次性 token」的防护原理——它为什么能防重放、重放时服务端会返回什么。</p>
+</div>
+<details class="hint-detail">
+<summary>详细解题过程（点击展开）</summary>
+<div>
+点一次「立即转账」，在 Burp 中抓到 <code>POST modules/burp/api/ex4.php</code> 的请求 &rarr;
+右键 Send to Repeater &rarr; 在 Repeater 里连点两次 Send，第二次会返回
+<code>status=replay</code> 并提示重放。<br>
+<b>代理设置：</b>浏览器代理指向 <code>127.0.0.1:8080</code>，Burp &rarr; Proxy &rarr; Intercept is on。
+</div>
+</details>

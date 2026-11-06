@@ -1,0 +1,31 @@
+<h4>序列化和反序列化的意义</h4>
+<p>序列化（serialize）是把内存中的对象、数组等数据结构转换成可存储、可传输的字节流（在 PHP 里通常表现为一段字符串）；反序列化（unserialize）则是反过来，把字节流还原成原来的对象与属性。程序里的对象只存在于当前进程的内存中，进程结束就消失，也无法直接通过网络发给另一台机器，所以必须先"拍平成文本"。</p>
+<p>它主要解决两类问题：<b>网络传输</b>——接口、RPC、消息队列只能传字节流，发送方序列化、接收方反序列化，才能把对象跨机器传递；<b>持久化存储</b>——文件、数据库、缓存只能保存文本或二进制，对象要先序列化再落盘/写入缓存，读取时再还原。</p>
+<p>常见应用场景：</p>
+<ul>
+<li><b>Session 存储</b>：PHP 默认把 <code>$_SESSION</code> 数组序列化后写入 session 文件，请求开始时再反序列化还原。</li>
+<li><b>缓存</b>：Redis / Memcached 常把对象序列化后缓存，命中后反序列化返回，避免重复查库。</li>
+<li><b>RPC / 接口传输</b>：Java RMI、PHP SOAP、部分消息队列直接用序列化对象通信；JSON / XML 则可看作跨语言的轻量序列化格式。</li>
+<li><b>跨进程通信</b>：父子进程、微服务之间传递结构化数据时，也常用序列化后的字节流。</li>
+</ul>
+<pre>class User {
+    public $name = 'alice';
+    public $role = 'user';
+}
+$u = new User();
+echo serialize($u);
+// O:4:"User":2:{s:4:"name";s:5:"alice";s:4:"role";s:4:"user";}
+// 反序列化：$u = unserialize($str); 对象与属性被原样还原</pre>
+<p>也正因为反序列化会"按数据重建对象"，它不只是赋值：PHP 在还原过程中会自动调用 <code>__wakeup()</code>，对象销毁时调用 <code>__destruct()</code>，转字符串时调用 <code>__toString()</code>。如果反序列化的数据来自用户（Cookie、隐藏字段、接口参数），而代码里又存在这些危险魔术方法，攻击者就能借数据控制属性、串起 POP 链——这就是不安全反序列化漏洞的成因。本关 Cookie 中的偏好数据正是这样一个可控入口。</p>
+<h4>漏洞描述</h4>
+<p>PHP 反序列化漏洞指程序对用户可控的数据调用 <code>unserialize()</code>，攻击者可构造特定类的对象，触发 <code>__destruct</code>、<code>__wakeup</code>、<code>__toString</code> 等魔术方法，形成"POP 链"从而执行文件写入、命令执行等危险操作。本关 Cookie 中的偏好数据就是可控入口。</p>
+<h4>漏洞危害</h4>
+<p>反序列化漏洞可被"链式"放大：入口看似只是传入一个对象，但通过 POP 链串起现有类的魔术方法，最终可实现任意文件写入、命令执行、SSRF 等严重后果；主流框架（ThinkPHP、Laravel、Fastjson、Shiro）的反序列化链曾多次引发大规模入侵事件。利用门槛低（现成工具一键生成 payload），危害却是服务器级沦陷。</p>
+<h4>挖掘技巧与经验</h4>
+<ul>
+<li>先找可控的序列化入口：Cookie、隐藏表单值、缓存、Session 文件、API 参数中的 base64 串。</li>
+<li>找魔术方法：<code>__destruct</code>、<code>__wakeup</code>、<code>__construct</code>、<code>__toString</code>、<code>__call</code>，重点看其中是否调用了可控属性。</li>
+<li>手工构造 payload：可先用 PHP 本地 <code>serialize(new Class())</code> 生成，再改属性值；注意序列化长度必须与实际字符串长度一致。</li>
+<li>属性可见性影响序列化键名：<code>public</code> 正常、<code>private</code> 前缀 <code>%00类名%00</code>、<code>protected</code> 前缀 <code>%00*%00</code>。</li>
+<li>真实代码里通常没有现成的 Logger，需要用 <code>__destruct</code>/<code>__toString</code> 逐个串联形成 POP 链，可借助 phpggc 工具。</li>
+</ul>

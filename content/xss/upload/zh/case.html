@@ -1,0 +1,103 @@
+<table class="case-table">
+<thead>
+<tr><th>位置</th><th>影响</th></tr>
+</thead>
+<tbody>
+<tr>
+<td>某公司留言板 <code>/index/guest/save.html</code>，brief(需求简述)参数</td>
+<td>存储型。payload 直存数据库，管理员后台查看留言时 JS 在其浏览器执行，可打后台会话</td>
+</tr>
+<tr>
+<td><code>/esadmin/kindeditor/asp.net/upload_json.ashx</code>（未授权上传）</td>
+<td>存储型。匿名上传 HTML 以 text/html 渲染于官网域名，JS 执行已验证，可挂钓鱼、打访客</td>
+</tr>
+<tr>
+<td>www 主站 <code>/w/user/login</code> 的 callback 参数；open 子域 <code>/sign/in</code> 的 url 参数</td>
+<td>两处反射型，未认证即可触发，无 CSP；可窃会话/钓鱼跳转</td>
+</tr>
+<tr>
+<td><code>/manager/360API/set360cid.asp</code> 与 <code>get360cid.asp</code>（Cookie反射+URL参数qhclickid自动写入）；另 cid 参数反射</td>
+<td>存储型（自动触发）。配合 ACAO:* 可跨站读写，窃取含 ASPSESSIONID 的 Cookie 实现账户接管</td>
+</tr>
+<tr>
+<td>POST <code>/api/upload/video</code>（可传 .svg/.html，原样按 image/svg+xml、text/html 返回）</td>
+<td>存储型。访问者浏览即执行；可结合 CORS 反射+凭据读取后台接口、窃管理员 token</td>
+</tr>
+<tr>
+<td><code>/website_back/admin/upload/upload</code></td>
+<td>未授权存储型。任意 .html/.svg/.php 以原始 Content-Type 可访问，脚本同源执行</td>
+</tr>
+<tr>
+<td><code>/search.php</code> 的 keyword 参数</td>
+<td>反射型。回显进搜索结果 h2，text/html 无编码，script/onerror 可执行</td>
+</tr>
+<tr>
+<td><code>preview.*.cn</code>（kkFileView）<code>/preview/fileUpload</code></td>
+<td>未授权存储型。上传 HTML 同源以 text/html 返回，脚本在 preview.entss.cn 域执行</td>
+</tr>
+<tr>
+<td>mrd_pay 后台 <code>/common/upload</code>（已认证用户），文件落在 <code>/profile/upload/</code></td>
+<td>存储型。任意低权限账号可植入 HTML，text/html 原样返回</td>
+</tr>
+<tr>
+<td><code>api.*.com</code> <code>/weapi/qiniu/get-upload-token</code>（未授权取七牛令牌）→ <code>img.*.com</code></td>
+<td>存储型。任意 key/扩展名直传生产 CDN 桶，.html 以 text/html+inline 返回，无 CSP</td>
+</tr>
+<tr>
+<td>① <code>/ucenter/process/handler_report.ashx</code>（未认证 editknow 改文章正文）② <code>/search/</code> 的 search_key 参数</td>
+<td>① 存储型：文章正文注入 <code>&lt;svg onload&gt;</code> 对所有访客执行，且可未认证篡改/删除文章；② 反射型：注入 title/meta/input 多处</td>
+</tr>
+<tr>
+<td>POST <code>/api/demo-requests</code>、<code>/api/track</code>（未授权写入）→ <code>/admin.html</code> innerHTML 渲染</td>
+<td>存储型打管理员。无头浏览器实证 alert(document.domain)；可窃 admin_token 会话+全量预约 PII</td>
+</tr>
+<tr>
+<td><code>/v1/board/upload_file_intel?type=svg</code> → <code>boardcdn.*.com</code></td>
+<td>存储型 XSS 原语。可控 Content-Type 在可信 CDN 域托管含脚本 SVG，可用于 XSS/钓鱼</td>
+</tr>
+<tr>
+<td>① <code>/api/minio</code> 未授权上传+回读 ② <code>/api/news</code> 未授权写 title → <code>/html/news.html</code> innerHTML 渲染</td>
+<td>① 未授权存储型：HTML 以 text/html 返回；② 存储型打新闻页访客</td>
+</tr>
+<tr>
+<td><code>/plus/recommend.php</code> 的 arcurl 参数</td>
+<td>反射型+开放重定向。闭合约束注入 <code>&lt;svg onload&gt;</code>，WAF 放行、无 CSP，GET 直达</td>
+</tr>
+<tr>
+<td>① <code>pro.upload.*.com.cn</code>（经匿名 /generate/sts 写 OSS）② <code>/tm/search</code> 的 name 参数（<code>&lt;/script&gt;</code> 逃逸）</td>
+<td>① 存储型：可信子域执行任意 JS/托管钓鱼页，绕过 .html 拦截；② 反射型，可读非 HttpOnly 会话 Cookie</td>
+</tr>
+<tr>
+<td>① <code>/verify?account=</code> 反射型 ② <code>/calendar</code> 事件标题存储型</td>
+<td>① 反射型窃非 HttpOnly 的 union_center_user，同源调用无 CSRF 的收款账户修改接口，端到端验证可劫持佣金提现账户；② FullCalendar 按 HTML 渲染标题，onerror 执行</td>
+</tr>
+<tr>
+<td><code>/api/web/v2/upload/file/{fileKey}/{hash}</code>（未认证，fileKey 可从 sitemap.xml 获取）→ 华为云 OBS</td>
+<td>存储型。SVG/HTML 保留原始 MIME 上传，受害者查看白板时解析脚本，可窃 Cookie</td>
+</tr>
+<tr>
+<td>newsshow.php 的 content 与 title 参数</td>
+<td>反射型两处。content 回显进正文 div，title 可用 <code>&lt;/title&gt;</code> 逃逸；WAF 仅拦 script/img onerror，<code>&lt;svg onload&gt;</code> 可绕过</td>
+</tr>
+<tr>
+<td><code>/resource/oss/upload</code>（未授权）→ MinIO 桶 <code>test.*.com:9000/airx-mes</code></td>
+<td>存储型/钓鱼。桶匿名可列举读取，HTML 按 text/html 返回，借企业域名托管</td>
+</tr>
+<tr>
+<td>na.*.com <code>/Chance.php</code> 与 www 主站 <code>/Vin/UploadImage</code> 的 JSONP callback 参数</td>
+<td>反射型。callback 未过滤、Content-Type text/html 无 nosniff，可作 script src 在 yiparts 源执行 JS，窃取 YPSESSION 等凭据</td>
+</tr>
+<tr>
+<td>① <code>/upload/getTmpSecret</code> 匿名下发 COS 临时密钥 ② JFinal/JBoot 400 错误页（<code>/activity/get</code>、<code>/doc/search</code> 等多个整数参数）</td>
+<td>① 存储型：可覆盖静态资源植入 HTML/JS；② 反射型：参数未转义拼入 400 页，GET 即可触发</td>
+</tr>
+<tr>
+<td>my/new/121.test.*.cn 的 <code>/Common/TipAndJump</code>（tip、url 参数）</td>
+<td>反射型。JS 单引号串上下文注入 showMsg()，WAF 仅拦常见 payload，可绕过执行任意 JS</td>
+</tr>
+<tr>
+<td><code>/article/commentAjaxList</code> 评论接口</td>
+<td>存储型。评论 content 未转义返回，库中已存在 <code>&lt;script&gt;</code> 载荷</td>
+</tr>
+</tbody>
+</table>

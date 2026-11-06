@@ -1,0 +1,7 @@
+<h4>绕过技巧</h4>
+<ul>
+<li><b>Token 未绑定会话</b>：用自己账号的合法 token 构造攻击页面，受害者提交时 token 依然能通过校验。</li>
+<li><b>Token 只校验"是否存在"</b>：提交空 token、删除 token 参数、或传 <code>token=null</code> 试试。</li>
+<li><b>只校验 Referer</b>：用 <code>Referrer-Policy: no-referrer</code> 让请求不带 Referer；或用 <code>https://目标域名@攻击者域名</code>、子域名（<code>目标域名.attacker.com</code>）绕过弱正则校验。</li>
+<li><b>SameSite=Lax 限制</b>：GET 型 CSRF 仍然可用；也可寻找站内跳转/开放重定向接口作为"同站第一跳"。</li>
+</ul>

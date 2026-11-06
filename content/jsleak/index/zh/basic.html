@@ -1,0 +1,12 @@
+<h4>漏洞描述</h4>
+<p>JS 敏感信息泄露指前端代码（脚本、sourcemap、注释、配置文件）中残留了不该给用户看到的内容：云存储 AK/SK、数据库口令、内部接口地址、测试账号、JWT 密钥等。攻击者只需阅读 JS 就能拿到进入后台或云资源的钥匙。</p>
+<h4>漏洞危害</h4>
+<p>密钥类信息一旦泄露，危害是"即时可用"的：攻击者拿到云 AK/SK 即可完全接管云存储（读取、篡改、删除业务数据），甚至批量创建云资源挖矿，造成高额账单；若泄露的是数据库口令、JWT 密钥或内部接口地址，可被用于拖库、伪造任意用户身份、摸清内网架构后横向渗透。此类密钥会被自动化扫描器在代码提交后几分钟内批量收割，暴露窗口极短。</p>
+<h4>挖掘技巧与经验</h4>
+<ul>
+<li>浏览器 DevTools &rarr; Sources / Network 过滤 <code>.js</code>，或用 Burp Proxy 的 HTTP history 按扩展名筛选。</li>
+<li>全局搜索关键字：<code>accessKey</code>、<code>secret</code>、<code>token</code>、<code>password</code>、<code>appid</code>、<code>api</code>、<code>internal</code>、<code>oss</code>。</li>
+<li>别放过 <code>.js.map</code>（sourcemap）：能还原完整源码、注释和接口路径。</li>
+<li>常见来源：打包工具把环境变量注入前端、开发者调试代码未删除、老版本代码打包残留。</li>
+<li>拿到 AK/SK 后可测试云厂商 OpenAPI（列举 Bucket、读取对象），但务必在授权范围内验证。</li>
+</ul>

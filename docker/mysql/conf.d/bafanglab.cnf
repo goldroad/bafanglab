@@ -1,0 +1,6 @@
+# bafanglab - MariaDB 容器配置（SQL 注入文件读写关卡依赖 secure_file_priv）
+# 路径约定：与 web 容器/宿主机一致的绝对路径（docker-compose.yml 中 bind mount 对齐）
+[mysqld]
+secure_file_priv=/opt/bafanglab/modules/sqli/files
+character-set-server=utf8
+collation-server=utf8_general_ci

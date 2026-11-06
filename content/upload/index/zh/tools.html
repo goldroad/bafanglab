@@ -1,0 +1,15 @@
+<h4>中国蚁剑（AntSword）</h4>
+<p>开源跨平台的 WebShell 管理工具，支持 PHP / ASP / ASPX / JSP 等一句话木马。拿到上传后的 shell 地址，用它连接即可执行命令、浏览、上传下载服务器文件，是本关最常用的 WebShell 管理工具。</p>
+<p><b>下载与安装：</b></p>
+<pre>
+1. 下载 AntSword-Loader（启动器）
+   https://github.com/AntSwordProject/AntSword-Loader/releases
+
+2. 下载 antSword（源码包）
+   https://github.com/AntSwordProject/antSword/releases
+
+3. 解压 antSword 源码包，打开 AntSword-Loader，选择「初始化」并指向解压后的 antSword 目录
+
+4. 连接配置：URL 填 {{SITE}}/uploads/你的shell.php，连接密码填一句话中的参数名（如 cmd），编码器默认
+</pre>
+<p><b>配套建议：</b>上传请求用 Burp Suite 抓包，绕过扩展名黑名单后拿到 shell 地址，再用中国蚁剑管理。</p>

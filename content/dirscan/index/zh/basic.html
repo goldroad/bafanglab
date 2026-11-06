@@ -1,0 +1,46 @@
+<h4>什么是目录扫描</h4>
+<p>当我们打开一个网站时（例如 <code>www.example.com</code>），并不知道这个网站有哪些目录、文件，或者接口。<br>
+例如 <code>www.example.com/abc/def/xyz.php?id=1&amp;name=wuya</code>——注意：<code>/abc/def/xyz.php</code> 有可能是网站根目录下一个真实存在的文件，也可能仅仅是一个映射的接口。</p>
+<p>只有收集尽量多的路径、文件、接口，才能有更多的测试点，才可能发现更多的漏洞，包括直接发现各种敏感文件。寻找网站的路径、文件、接口这个过程，就叫<b>目录扫描</b>。</p>
+<h4>漏洞描述</h4>
+<p>目录扫描（信息泄露）指站点暴露了未授权访问的敏感目录与文件：数据库备份、隐藏后台、测试文件、编辑器临时文件、版本库等。攻击者据此获取账号密码、源码或直接进入后台，是渗透测试中最常见的第一步。</p>
+<h4>最常见的敏感文件与目录</h4>
+<p>扫描字典基本就是按下面这些类别组织的。看到任何一类命中，都要继续往下挖，而不是扫到就结束。</p>
+<ul>
+<li><b>版本控制与备份类：</b><code>/.git/</code>、<code>/.svn/</code>、<code>/.hg/</code>、<code>/.DS_Store</code>、<code>*.bak</code> / <code>*.old</code> / <code>*.swp</code> / <code>*.zip</code> / <code>*.sql</code>。<br>
+危害：版本库可还原完整源码与全部历史提交，备份文件常含数据库口令、源码甚至整库数据。<br>
+探测要点：先请求 <code>/.git/HEAD</code>，返回 <code>ref: refs/heads/master</code> 即确认泄露；<code>*.php.bak</code>、<code>*.php~</code> 不会被 PHP 解析，可直接读到原始源码；<code>www.zip</code>、<code>db.sql</code> 要检查是否可下载。</li>
+<li><b>配置文件类：</b><code>config.php</code>、<code>config.inc.php</code>、<code>.env</code>、<code>web.config</code>、<code>phpinfo.php</code>、<code>info.php</code>、<code>test.php</code>。<br>
+危害：数据库账号密码、云 AK/SK、邮件口令、加密密钥直接外泄；<code>phpinfo.php</code> 会暴露绝对路径、PHP 版本、扩展与已禁用函数，为后续利用铺路。<br>
+探测要点：配置文件通常被 PHP 解析后不输出内容，看到空白 200 不代表不存在，可尝试 <code>config.php.bak</code>、<code>.env</code>（点文件常被服务器直接返回）；<code>phpinfo()</code> 页面特征明显，搜索 <code>PHP Version</code>。</li>
+<li><b>管理后台类：</b><code>/admin</code>、<code>/admin_area</code>、<code>/manager</code>、<code>/manage</code>、<code>/login.php</code>、<code>/wp-admin</code>、<code>/administrator</code>。<br>
+危害：后台是弱口令爆破、越权、上传 Getshell 的入口，一旦进入往往等于整站失守。<br>
+探测要点：302 跳转到登录页、401 认证框、403 禁止访问都说明路径存在；关注登录页是否有验证码、默认口令、未授权接口。</li>
+<li><b>接口与调试类：</b><code>/api</code>、<code>/debug</code>、<code>/test</code>、<code>/swagger-ui</code>、<code>/v2/api-docs</code>、<code>/actuator</code>、<code>/graphql</code>、<code>/console</code>。<br>
+危害：接口文档暴露全部参数与内部端点；<code>actuator</code> 的 <code>/env</code>、<code>/heapdump</code> 可直接读取环境变量与内存；Swagger 上的调试接口常可未授权调用。<br>
+探测要点：<code>/swagger-ui.html</code>、<code>/v2/api-docs</code> 返回 JSON 即命中；Spring Boot 检查 <code>/actuator</code>、<code>/actuator/env</code>、<code>/actuator/heapdump</code>。</li>
+<li><b>上传与备份目录：</b><code>/uploads</code>、<code>/upload</code>、<code>/backup</code>、<code>/bak</code>、<code>/db</code>、<code>/data</code>、<code>/temp</code>。<br>
+危害：上传目录可能允许直接访问已上传的 WebShell；备份目录常直接存放整站压缩包与 SQL 导出。<br>
+探测要点：注意 403（目录存在但禁止浏览）与 301（存在且可访问）的差异；上传目录要看是否可遍历、是否解析脚本。</li>
+<li><b>日志类：</b><code>*.log</code>、<code>error_log</code>、<code>access.log</code>、<code>debug.log</code>、<code>install.log</code>。<br>
+危害：日志含内网地址、账号、数据库报错 SQL、甚至明文密码；结合 LFI 还可投毒日志 Getshell。<br>
+探测要点：逐个试 <code>error_log</code>、<code>access.log</code>，返回文本即命中；注意大小写与 <code>.txt</code> 变体。</li>
+<li><b>常见 CMS 固定路径：</b>WordPress 的 <code>/wp-admin</code>、<code>/wp-content</code>、<code>/wp-json</code>、<code>/xmlrpc.php</code>；DedeCMS 的 <code>/dede</code>、<code>/data/backupdata</code>；Discuz 的 <code>/uc_server</code>；ThinkPHP 的 <code>/index.php?s=</code> 与 <code>/runtime</code>。<br>
+危害：CMS 固定路径一旦确认，可直接对号入座找已知漏洞、默认后台与备份目录。<br>
+探测要点：先识别指纹（<code>/wp-login.php</code>、<code>/robots.txt</code>、响应头、静态资源路径），再按对应 CMS 的默认字典精准扫描。</li>
+</ul>
+<h4>挖掘技巧与经验</h4>
+<ul>
+<li>先用 <code>robots.txt</code>、<code>sitemap.xml</code>、页面报错信息找线索，再看 JS 文件里硬编码的接口路径。</li>
+<li>关注响应码差异：200（存在）、301/302（重定向）、403（存在但禁止）、404（不存在）；很多站点自定义了 404 页面，要靠<b>响应长度</b>判断。</li>
+<li>大字典扫不到时，换思路：递归扫描已发现目录、用 404 页面大小做过滤、加 <code>--random-agent</code> 绕过简单 WAF。</li>
+<li>扫到 <code>/.git/</code> 必深挖：先验证 <code>/.git/HEAD</code> 是否返回 <code>ref: refs/heads/...</code>，再用 GitHack/git-dumper 拖下整个仓库还原源码与历史。</li>
+</ul>
+<h4>.git 信息泄露专题</h4>
+<ul>
+<li>成因：用 git 部署/备份站点时把 <code>.git</code> 目录一起上传到 Web 目录，且服务器未禁止访问。</li>
+<li>关键文件：<code>.git/HEAD</code>（当前分支）、<code>.git/config</code>（仓库配置）、<code>.git/logs/HEAD</code>（<b>明文提交记录</b>，浏览器/Burp 可直接读）、<code>.git/index</code>（暂存区清单）、<code>.git/objects/</code>（zlib 压缩的 blob/tree/commit 对象）。</li>
+<li>工具利用：<b>GitHack</b>、<b>git-dumper</b> 下载整个 .git 后 <code>git log</code>、<code>git checkout</code>、<code>git show</code> 还原全部源码。</li>
+<li>手工利用：读 logs/HEAD 拿提交 sha1 → 按"前 2 位 / 后 38 位"拼 <code>objects/</code> 路径下载 → zlib 解压即得对象内容（commit→tree→blob 逐级解析）。</li>
+<li>重点认知：文件在最新版本被删除<b>不等于安全</b>——历史提交仍可还原。泄密后应改密码并从历史中彻底抹除（filter-branch / BFG）。</li>
+</ul>

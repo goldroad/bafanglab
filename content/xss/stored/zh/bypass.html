@@ -1,0 +1,8 @@
+<h4>绕过技巧</h4>
+<ul>
+<li><b>完全没有过滤</b>：昵称或留言里直接写 <code>&lt;script&gt;alert(1)&lt;/script&gt;</code>，所有访问者都会触发。</li>
+<li><b>只做了简单 htmlspecialchars（未加 ENT_QUOTES）</b>：单引号未被转义，在单引号属性中闭合，如 <code>' onmouseover=alert(1) x='</code>。</li>
+<li><b>完整安全转义</b>：常规标签失效后，改用富文本白名单漏网标签 <code>&lt;svg onload&gt;</code>、<code>&lt;math&gt;</code>、<code>&lt;details open ontoggle&gt;</code>，或上传含 payload 的图片（EXIF/文件名 XSS）。</li>
+<li><b>黑名单过滤 script</b>：大小写、双写、<code>&lt;img src=x onerror&gt;</code>、<code>&lt;body onload&gt;</code>、HTML 实体。</li>
+<li><b>长度限制</b>：用短 payload <code>&lt;svg/onload=alert(1)&gt;</code>，或分多条留言拼接执行。</li>
+</ul>

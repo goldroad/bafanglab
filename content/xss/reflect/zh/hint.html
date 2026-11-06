@@ -1,0 +1,15 @@
+<div class="hint-thought">
+<h4>思路提示</h4>
+<p>反射型 XSS 的核心是<b>用户输入被原样回显到页面</b>。思路：构造一个能执行 JS 的标签（如 <code>&lt;script&gt;</code>、<code>&lt;img onerror&gt;</code>、<code>&lt;svg onload&gt;</code>），观察输入回显的位置，如果在属性里就先用 <code>"&gt;</code> 闭合属性再注入。本关关键词同时回显在 input 的 value 属性和 result 区域，可以尝试闭合属性。</p>
+</div>
+<details class="hint-detail">
+<summary>详细解题过程（点击展开）</summary>
+<div>
+<b>基础 payload：</b><br>
+<code>&lt;script&gt;alert(1)&lt;/script&gt;</code><br>
+<code>&lt;img src=x onerror=alert(document.cookie)&gt;</code><br>
+<code>&lt;svg onload=alert(1)&gt;</code><br>
+<b>观察点：</b>关键词同时回显在 input 的 value 属性和 result 区域，可尝试 <code>"&gt;&lt;script&gt;alert(1)&lt;/script&gt;</code> 闭合属性。<br>
+<b>Burp 玩法：</b>抓到请求后在 Repeater 中反复修改 q 参数测试不同 payload。
+</div>
+</details>

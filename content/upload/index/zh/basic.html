@@ -1,0 +1,14 @@
+<h4>漏洞描述</h4>
+<p>文件上传漏洞指后端对上传文件校验不严（只查扩展名黑名单、只查 Content-Type、只查文件头），导致攻击者可以上传可执行脚本（WebShell）并通过访问该文件获得服务器权限。</p>
+<h4>漏洞危害</h4>
+<p>文件上传是通往服务器控制权的"直达车"：WebShell 一旦落地，攻击者即获得与 Web 服务同级的系统权限——执行任意命令、读写全站文件与数据库、植入后门长期潜伏；服务器还会被用作肉鸡发起 DDoS、挖矿或作为跳板攻击内网。多数真实入侵事件中"拿下服务器"这一步正是由上传漏洞完成。</p>
+<h4>挖掘技巧与经验</h4>
+<ul>
+<li>黑名单绕过思路：大小写（<code>.PHP</code>）、特殊后缀（<code>.pht/.phar/.php7</code>）、多扩展名（<code>shell.php.jpg</code>）、空字节截断（老版本 PHP）。</li>
+<li>白名单也可能被绕过：检查是否可上传 <code>.htaccess</code> 改变解析规则，或配合文件包含执行。</li>
+<li>只检查 Content-Type 时，用 Burp 把 <code>Content-Type: image/jpeg</code> 即可通过。</li>
+<li>只检查文件头（魔术字节）时，做"图片马"：JPEG 文件尾部追加 PHP 代码，再用文件包含执行。</li>
+<li>注意解析漏洞：Apache 多扩展名、Nginx 空字节、IIS 分号解析；上传成功却访问 404，通常是保存路径不在 Web 目录。</li>
+</ul>
+<h4>更多练习场景</h4>
+<p>如果需要练习更多场景，请安装 upload-labs 靶场：<a href="https://github.com/c0ny1/upload-labs" target="_blank" rel="noopener noreferrer">https://github.com/c0ny1/upload-labs</a></p>

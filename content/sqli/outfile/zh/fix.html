@@ -1,0 +1,25 @@
+<h4>修复方法</h4>
+<ul>
+<li><b>参数化查询</b>（PDO / MySQLi prepared statement）：从根上消除拼接，攻击者无法再注入 <code>UNION ... INTO OUTFILE</code>。</li>
+<li><b>数据库最小权限</b>：业务账号不授予 <code>FILE</code> 权限。授权示例：<code>REVOKE FILE ON *.* FROM 'bafang'@'localhost';</code>，只保留业务所需的 SELECT / INSERT / UPDATE / DELETE。</li>
+<li><b>固定 secure_file_priv</b>：MySQL 5.7+ 该变量只读，必须在 <code>my.ini</code> 中配置并重启：
+<pre>
+# 完全禁用文件导入导出（推荐生产环境）
+secure-file-priv=""
+
+# 或只允许专用目录（该目录不能位于 Web 根目录）
+secure-file-priv="D:/mysql-files"
+</pre>
+</li>
+<li><b>Web 目录禁止脚本执行</b>：即使文件被写入，也不能当脚本运行。Apache 可在目录级 <code>php_admin_flag engine off</code>；Nginx 用 <code>location ~ \.php$ { deny all; }</code> 限制上传/数据目录。</li>
+<li><b>关闭详细错误回显</b>：生产环境 <code>display_errors=Off</code>，避免错误码、路径与权限信息泄露。</li>
+<li><b>文件写入目录独立</b>：把可写目录放到 Web 根目录之外，或用只读文件系统 / 独立低权限账号运行 MySQL。</li>
+</ul>
+<h4>修复示例代码</h4>
+<pre>
+// 参数化查询：注入点消失，UNION / INTO OUTFILE 无法拼接
+$stmt = mysqli_prepare($conn, 'SELECT id, username, email, role FROM users WHERE id = ?');
+mysqli_stmt_bind_param($stmt, 'i', $id);
+mysqli_stmt_execute($stmt);
+$res = mysqli_stmt_get_result($stmt);
+</pre>

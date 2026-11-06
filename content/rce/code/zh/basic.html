@@ -1,0 +1,11 @@
+<h4>漏洞描述</h4>
+<p>代码执行指程序把用户输入交给 <code>eval()</code>、<code>assert()</code>、<code>create_function()</code>、反序列化等"代码求值"能力执行。与命令执行不同，它直接在 PHP 进程内执行任意 PHP 代码，可直接写文件、连接数据库、反弹 Shell。</p>
+<h4>漏洞危害</h4>
+<p>代码执行与命令执行危害同级且更加灵活：攻击者注入的是 PHP 代码本身，可直接读写数据库、调用任意内部函数、篡改业务逻辑、写入 WebShell；由于代码在 Web 进程内执行，不产生额外的系统调用特征，更难被安全设备检测。此类漏洞一旦出现，通常直接定级为严重（Critical）。</p>
+<h4>挖掘技巧与经验</h4>
+<ul>
+<li>找 eval 型入口：在线计算器、模板表达式、规则引擎、<code>preg_replace</code> 的 <code>/e</code> 修饰符（老版本）、反序列化魔术方法。</li>
+<li>先执行 <code>phpinfo()</code> 确认环境，再用 <code>system()</code>、<code>shell_exec()</code> 升级为命令执行。</li>
+<li>无回显时使用 <code>file_put_contents</code> 写文件，再访问验证。</li>
+<li>注意 WAF 对 <code>system</code>、<code>eval</code> 关键字的拦截，可用字符串拼接绕过。</li>
+</ul>

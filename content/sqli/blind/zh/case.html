@@ -1,0 +1,115 @@
+<table class="case-table">
+<thead>
+<tr><th>位置</th><th>影响</th></tr>
+</thead>
+<tbody>
+<tr>
+<td><code>/wsmkweb/detail/{id}</code> 文章详情接口路径参数（xlh）</td>
+<td>URI 注入，MySQL 5.0.22，库 wsmkweb，数据库账号 root@localhost（Win32），可提取全库数据、读文件，存在 INTO OUTFILE 写 shell 风险</td>
+</tr>
+<tr>
+<td>GET <code>/product_search_zh?title=</code></td>
+<td>布尔盲注，用 <code>||</code> 运算符绕过 WAF，可逐字符提取库数据</td>
+</tr>
+<tr>
+<td><code>/search.aspx?key=</code>（GET）</td>
+<td>Access+DTcms，LIKE 子句拼接报错注入，可读全部表：dt_manager（管理员）、dt_users、dt_article 等</td>
+</tr>
+<tr>
+<td>全站 <code>/{category}/{id}.html</code> 路由（Sumaart CMS，suma_redirect 表 old_url 拼接）</td>
+<td>报错注入（XPATH），已提取 suma_admin_user 表 admin 账号、邮箱及 MD5 密码哈希</td>
+</tr>
+<tr>
+<td><code>/news/id/{id}.html</code>、<code>/productApp/id/</code>、<code>/front/id/</code>、<code>/programme/id/</code> 共 4 处数字型注入</td>
+<td>报错/盲注，全库 30+ 表可提取：4 个管理员密码哈希、客户留言 PII（手机号/预算/需求）、SMS API Key</td>
+</tr>
+<tr>
+<td>POST <code>/search</code>（JSON）keywords 参数</td>
+<td>云锁 WAF 不检查 JSON body，<code>#</code> 闭合+EXTRACTVALUE 报错注入，已提取 admin 管理员账号/密码、全库 37 张表结构</td>
+</tr>
+<tr>
+<td>POST <code>/searchs</code> key 参数</td>
+<td>未登录布尔盲注，库 hdm721886172_db 共 53 表，已提取 admin、luo 两管理员的 MD5 哈希+盐值，及 DB 用户/内网 IP</td>
+</tr>
+<tr>
+<td><code>/home/public/search.html?keywords=</code></td>
+<td>RLIKE 布尔盲注（200/500 差分），MySQL 8.0.39，库 yingshi，可逐字符提取任意数据</td>
+</tr>
+<tr>
+<td>OutPortalDetailView?messageid=</td>
+<td>Oracle 报错/布尔/时间三盲，用户 SRM，100+ 业务表，已从 PREVENDORTEMP 提取供应商账号、公司代码、手机号、邮箱</td>
+</tr>
+<tr>
+<td><code>/show.asp</code>、<code>/shows.asp</code> id 参数（布尔盲注）、<code>/list.asp</code> id（报错注入）</td>
+<td>*营销 CMS，Access 库，已验证可提取文章表 id/title/content/author 等字段</td>
+</tr>
+<tr>
+<td>POST <code>/biddingNotice/getList</code> tenderType 参数</td>
+<td>MSSQL，OR 注入绕过过滤读取全部 1534 条招标公告（项目详情、采购组织、联系人手机号）</td>
+</tr>
+<tr>
+<td><code>/ajax/aboutus</code> orderBy 参数</td>
+<td>MyBatis <code>${}</code> 拼接进 ORDER BY，500 错误页回显完整 SQL，注入值原样进入语句（SLEEP 验证成立）</td>
+</tr>
+<tr>
+<td><code>/bs/public/query/dfp</code>、<code>/dfpro/public/query/dfp</code> custID 参数</td>
+<td>时间盲注，SLEEP 与 WAITFOR DELAY 均有效（MSSQL），延迟 5~15s 稳定复现</td>
+</tr>
+<tr>
+<td><code>/check/check_email_exists_ajax/</code> email 参数（另 <code>/check/check_match_old_password_ajax/</code> uid 确认拼接）</td>
+<td>未授权布尔盲注（合法邮箱字符集带引号+<code>/**/</code> 绕过），OR 1=1/1=2 稳定返回 1/0，可探测列并读库</td>
+</tr>
+<tr>
+<td>POST <code>/c/subject/page</code> orderByField 参数（JSON）</td>
+<td>ORDER BY 子查询 SLEEP 时间盲注，MySQL，延时与秒数线性对应，sqlmap 复确认，无需 token</td>
+</tr>
+<tr>
+<td><code>/file/attachment/page</code>、<code>/editorlog/page</code> conditions[].field 参数</td>
+<td>未鉴权布尔盲注，绕过 Druid WallFilter，已实际导出 sh_sys_user 全部用户名，证明可逐表拖库</td>
+</tr>
+<tr>
+<td>POST <code>/biz-config/un_auth/attribute/listDto</code> conditions[].field（另有 4 个已认证端点同样注入）</td>
+<td>未授权 extractvalue 报错注入，MySQL 8.0.28，可读同实例全部 22 个租户库：act_id_user 772 用户、企业 PII（公司名/手机/邮箱/信用代码）</td>
+</tr>
+<tr>
+<td><code>/search.asp</code> searchtype 参数</td>
+<td>AspCms 2.0 + MS Access，布尔盲注+报错回显完整 SQL，任意表达式可求值</td>
+</tr>
+<tr>
+<td>POST <code>/book.php</code> 留言 xm/dh/xx 三字段</td>
+<td>单引号报错、反斜杠转义成功，确认原样拼接进 SQL，无 WAF 关键字拦截</td>
+</tr>
+<tr>
+<td><code>/?diypetmess/getContentExt</code> ids、<code>/?diypetmess/checkOrder</code> petId</td>
+<td>认证后拼接注入（注册开放+验证码可 OCR），语法报错回显可确认，配合 .svn/SQLite 库泄露危害放大</td>
+</tr>
+<tr>
+<td><code>/api/resources/bgimg?id=</code></td>
+<td>时间盲注，MySQL 8.x，root@localhost，确认存在 users、logo、admin 敏感表，可提取全库</td>
+</tr>
+<tr>
+<td><code>/dealer.html?kw=</code>、<code>/searchs.html?kw=</code>、<code>/ajax/product-ajax</code> type</td>
+<td>穿透阿里云 WAF（HEX/POWER/LIKE/IF+SLEEP 构造时间盲注），真假条件差 5-10 秒，通道验证可完整拖数据</td>
+</tr>
+<tr>
+<td><code>/admin/login/signin</code> username 参数</td>
+<td><code>admin'-- -</code> 注释绕过密码校验直接登录后台，进而重置任意会员密码、越权改会员资料（已实测接管并回滚）</td>
+</tr>
+<tr>
+<td>POST <code>/agent.aspx</code> ygzl 参数</td>
+<td>布尔/OR 注入，<code>' OR '1'='1</code> 读出全部 12 名员工 PII（姓名/电话/工号/微信号）</td>
+</tr>
+<tr>
+<td><code>/business</code> keyword 参数（<code>/en</code> <code>/de</code> <code>/fr</code> <code>/py</code> <code>/es</code> 变体同受影响）</td>
+<td>双引号触发 SQL 报错（yp_user_ext），布尔 oracle 成立；WAF 拦 UNION/SLEEP，未完成数据提取</td>
+</tr>
+<tr>
+<td><code>/taskflow/public/getNewsList</code> type、<code>/taskflow/public/getLecture</code> keywords</td>
+<td>UNION 注入（21 列）提取 version/database/user，且 LOAD_FILE 读服务器任意文件（secure_file_priv=''，已读 MySQL my.ini、error.log）</td>
+</tr>
+<tr>
+<td>*h5api.*.com POST <code>/car.feedback</code> logid（未授权）、basic.*.com <code>/api/OpenAPI.getData</code> orderid（*星号是企业名称）</td>
+<td>SQL Server sa 权限报错注入+堆叠查询：xp_cmdshell 取得主机命令执行并落 WebShell；读出 vin_license_info 687 万行（含 636 万车主姓名/334 万家庭住址）、93 万行车辆估值、119 个管理员明文口令、车主身份证号</td>
+</tr>
+</tbody>
+</table>

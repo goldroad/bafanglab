@@ -1,0 +1,12 @@
+<div class="hint-thought">
+<h4>思路提示</h4>
+<p>练习目标是<b>垂直越权</b>——服务端信任了客户端提交的身份参数。先理清请求走向：按钮触发的是一条 <b>GET</b> 请求，参数里带了当前用户角色。在 Burp 中拦截这条请求，找到控制角色的那个参数，把普通用户值改成管理员值再放行即可。重点是理解「改包 = 改服务端收到的输入」。</p>
+</div>
+<details class="hint-detail">
+<summary>详细解题过程（点击展开）</summary>
+<div>
+<p>Proxy 拦截点击链接产生的请求，把 <code>role=user</code> 改成 <code>role=admin</code>，点 Forward。<br>
+<b>接口地址：</b><code>modules/burp/api/ex1.php?role=user</code><br>
+<b>代理设置：</b>浏览器代理指向 <code>127.0.0.1:8080</code>，Burp &rarr; Proxy &rarr; Intercept is on。</p>
+</div>
+</details>

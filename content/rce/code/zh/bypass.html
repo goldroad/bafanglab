@@ -1,0 +1,8 @@
+<h4>绕过技巧</h4>
+<ul>
+<li><b>关键字被拦截</b>：字符串拼接 <code>sys.'tem'.('whoami')</code>、<code>chr()</code> 拼接、base64 解码后执行。</li>
+<li><b>危险函数被禁用</b>：先 <code>phpinfo()</code> 看 <code>disable_functions</code>，改用 <code>file_put_contents</code>、<code>include</code>、<code>mail</code>、<code>putenv</code> 等。</li>
+<li><b>长度受限</b>：分段写入文件再包含执行，或用 <code>assert</code>/<code>create_function</code> 拼接短 payload。</li>
+<li><b>无回显</b>：把执行结果写进 <code>uploads/</code> 目录下的文件，再访问读取。</li>
+<li><b>WAF 拦 <code>eval</code></b>：换 <code>assert</code>、<code>preg_replace</code> 的 <code>/e</code>（老版本）、反序列化魔术方法 <code>__destruct</code>。</li>
+</ul>

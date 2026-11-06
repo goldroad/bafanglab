@@ -1,0 +1,28 @@
+# bafanglab - Apache 配置
+# 版权所有：八方网域-无涯
+#
+# 为静态资源声明 UTF-8 字符集，避免浏览器直接打开 .js/.css/.txt/.json 时中文显示乱码
+AddDefaultCharset UTF-8
+AddCharset UTF-8 .js .css .txt .json .map .md .bak .sql .zip
+
+# 禁止目录浏览
+Options -Indexes
+
+# 强制 .bak / .old / .swp 等编辑器残留文件按纯文本返回
+# （phpstudy 的 fcgid 存在 magic 检测：文件含 <?php 开头会自动交给 PHP 执行）
+AddType text/plain .bak .old .swp .orig .tmp .save .bak2 .txt ~
+
+# 关键防御：config.php.bak 等文件即使有 PHP 标签也强制走静态处理
+# 这一条专门对抗 phpstudy + modsecurity 组合下对 config*.bak 的特殊拦截
+<FilesMatch "\.(bak|old|swp|orig|save|tmp)$">
+    RemoveHandler application/x-httpd-php .php .phtml .php3 .php5
+    RemoveType application/x-httpd-php
+    AddType text/plain .bak .old .swp .orig .save .tmp
+    Require all granted
+</FilesMatch>
+
+# 保护靶场项目自身的 git 仓库（练习用的示例泄露仓库在 backup/.git，不受影响）
+<IfModule mod_rewrite.c>
+RewriteEngine On
+RewriteRule ^\.git(/|$) - [F,L]
+</IfModule>

@@ -1,0 +1,22 @@
+<h4>漏洞描述</h4>
+<p>上传型 XSS 是存储型 XSS 的一个变种：服务器允许上传 <code>.html</code>、<code>.svg</code>、<code>.pdf</code> 等"会被浏览器解析"的文件，并且上传后的文件可以从<b>同源</b>地址直接访问。攻击者把 JS 写进这些文件，受害者打开链接时脚本就在目标域名下执行，等价于在该站点注入了一段持久化脚本。</p>
+<h4>漏洞危害</h4>
+<p>与存储型 XSS 相同：可窃取当前域下的 Cookie / localStorage 会话，冒用受害者身份操作、篡改页面内容、挂马钓鱼。区别在于 payload 藏在文件里而不是数据库里——很多系统只用心过滤了输入框，却完全没管上传文件的内容，因此这条路更难被业务方想到。若上传目录与主站同源，危害与主站 XSS 完全一致。</p>
+<h4>三种常见载体</h4>
+<ul>
+<li><b>HTML</b>：<code>.html</code> 以 <code>text/html</code> 返回时浏览器直接解析，<code>&lt;script&gt;</code> 一定执行，最简单也最稳定。</li>
+<li><b>SVG</b>：SVG 是 XML 格式的"图片"，但允许 <code>&lt;script&gt;</code> 与 <code>onload</code> 事件。以 <code>image/svg+xml</code> 直接访问时脚本会执行（<b>作为 &lt;img&gt; 引用时不会执行</b>，必须直接导航打开）。</li>
+<li><b>PDF</b>：PDF 支持内嵌 JavaScript（<code>/OpenAction</code> + <code>/JS</code>），用 Adobe Reader 打开会弹窗；如果把 PDF 做成语义上的 HTML 混排文件（polyglot），并被服务器错误地以 <code>text/html</code> 返回，浏览器也会执行其中的脚本。</li>
+</ul>
+<h4>挖掘技巧与经验</h4>
+<ul>
+<li>凡是"上传 + 回显可访问地址"的功能都要测：头像、附件、工单、简历、导入模板、导出报表。</li>
+<li>先看返回的 <code>Content-Type</code> 与响应头 <code>Content-Disposition</code>：<code>inline</code> 且与本域同源 = 高危。</li>
+<li>扩展名白名单里有 svg / pdf / xml / html / htm 任意一项，就值得试。</li>
+<li>上传目录若在 <code>/uploads/</code> 这类路径，通常可以直接访问；用目录扫描确认。</li>
+<li>成功弹出 <code>alert(1)</code> 只是开始，实战中要证明危害：读取 Cookie、发起同源请求（配合 CSRF）、读取页面中的敏感数据。</li>
+</ul>
+<h4>更多练习场景</h4>
+<p>如果需要练习更多上传与 XSS 场景，请安装 upload-labs 与 xss-labs：<br>
+<a href="https://github.com/c0ny1/upload-labs" target="_blank" rel="noopener noreferrer">https://github.com/c0ny1/upload-labs</a><br>
+<a href="https://github.com/do0dl3/xss-labs" target="_blank" rel="noopener noreferrer">https://github.com/do0dl3/xss-labs</a></p>

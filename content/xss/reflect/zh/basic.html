@@ -1,0 +1,14 @@
+<h4>漏洞描述</h4>
+<p>反射型 XSS 指用户输入被服务端"原样"拼进 HTML 响应，浏览器把它当作代码执行。Payload 不会落库，需要诱导受害者点击带 payload 的链接才会触发，常配合钓鱼链接使用。</p>
+<h4>漏洞危害</h4>
+<p>反射型 XSS 是钓鱼攻击的放大器：攻击者把恶意链接伪装成官方地址，受害者点击后脚本即以其身份在本站执行——窃取会话 Cookie 直接接管账号、记录键盘盗取密码、伪造登录框二次钓鱼、冒名发帖/转账/改密。若恰好命中管理员浏览器，可顺势拿下整个后台。</p>
+<h4>挖掘技巧与经验</h4>
+<ul>
+<li>先找所有回显点：URL 参数、路径、错误提示、搜索关键字、Referer。</li>
+<li>判断上下文：HTML 标签间 → <code>&lt;script&gt;alert(1)&lt;/script&gt;</code>；属性内 → 先用 <code>"</code> 或 <code>'</code> 闭合；JS 字符串内 → 用 <code>';alert(1);//</code>。</li>
+<li>被过滤时尝试变形：大小写、双写、HTML 实体、<code>&lt;svg onload&gt;</code>、<code>&lt;img src=x onerror&gt;</code>、<code>javascript:</code> 伪协议。</li>
+<li>用 Burp 的 Repeater 逐个字符探测哪些被过滤、被转义，比盲猜快得多。</li>
+<li>能弹窗只是起点，实战中重点是证明"可执行任意 JS"（读取 cookie、发起请求、钓鱼表单）。</li>
+</ul>
+<h4>更多练习场景</h4>
+<p>如果需要练习更多场景，请安装 xss-labs 靶场：<a href="https://github.com/do0dl3/xss-labs" target="_blank" rel="noopener noreferrer">https://github.com/do0dl3/xss-labs</a></p>

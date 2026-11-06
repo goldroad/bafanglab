@@ -1,0 +1,14 @@
+<h4>漏洞描述</h4>
+<p>本关为字符型 POST 注入：<code>WHERE username = '$u' AND password = '$p'</code>。引号可以被闭合，因此能用"万能密码"绕过登录校验，也能进一步把 SQL 注入扩展到拖库。</p>
+<h4>漏洞危害</h4>
+<p>POST 注入与 GET 注入危害等级完全相同：照样可拖库、绕登录、写文件拿 Shell。由于参数不暴露在 URL 中，更容易被开发人员与安全设备忽视，登录框、搜索框、注册表单都是高发位置，历史上多起重大用户信息泄露事件正是源于此类表单注入。</p>
+<h4>挖掘技巧与经验</h4>
+<ul>
+<li>万能密码入门：<code>admin' or '1'='1</code>、<code>admin' #</code>（# 注释后面内容）、<code>' or 1=1 -- -</code>。</li>
+<li>闭合方式要试三种：单引号、双引号、括号；注释符要试 <code>#</code>、<code>-- </code>、<code>/**/</code>。</li>
+<li>登录框回显 SQL 时是极好的学习样本：注意观察拼接后语句结构，再决定闭合方式。</li>
+<li>POST 注入适合用 sqlmap 的 <code>-r</code> 读取 Burp 保存的请求包，并加 <code>--level/--risk</code>。</li>
+<li>登录成功只是第一层目标，进阶是报错注入 / 联合查询读出 secrets 表。</li>
+</ul>
+<h4>更多练习场景</h4>
+<p>如果需要练习更多场景，请安装 sqli-labs 靶场：<a href="https://github.com/skyblueee/sqli-labs-php7" target="_blank" rel="noopener noreferrer">https://github.com/skyblueee/sqli-labs-php7</a></p>

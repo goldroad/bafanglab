@@ -1,0 +1,42 @@
+<h4>wfuzz （推荐）</h4>
+<p>Python 编写的 Web Fuzzer，功能强大、过滤语法灵活。</p>
+<pre>
+# 基本用法 - GET 参数名 Fuzz
+wfuzz -c -z file,dict_params.txt --sc 200 "<?php echo site_url('modules/fuzz/index.php'); ?>?FUZZ=1"
+
+# 过滤技巧 - 按响应行数过滤（排除 131 行的默认页面）
+wfuzz -c -z file,dict_params.txt --sh 131 "<?php echo site_url('modules/fuzz/index.php'); ?>?FUZZ=1"
+
+# POST 参数 Fuzz
+wfuzz -c -z file,dict_params.txt -d "FUZZ=1" --hh 0 "<?php echo site_url('some/api'); ?>"
+</pre>
+<p>本靶场实测：28 条字典，带 <code>--sh 131</code> 过滤后，<b>立即标出 debug (6458 Ch) 和 source (17772 Ch) 两个隐藏参数</b>。</p>
+
+<h4>ffuf（替代方案）</h4>
+<p>Go 编写，速度极快，语法简洁。</p>
+<pre>
+ffuf -u "<?php echo site_url('modules/fuzz/index.php'); ?>?FUZZ=1" -w dict_params.txt
+
+# 按响应大小过滤
+ffuf -u "<?php echo site_url('modules/fuzz/index.php'); ?>?FUZZ=1" -w dict_params.txt -fs 6321
+</pre>
+
+<h4>Burp 插件</h4>
+<ul>
+<li><b>Param Miner</b>（Burp 扩展商店免费装）：自动对请求进行参数名和参数值爆破，支持 Header/Cookie/Body 多种位置。</li>
+<li><b>Arjun</b>：参数发现 + 值爆破，开源插件，自动处理 POST/JSON/XML。</li>
+</ul>
+
+<h4>Kali 实战流程</h4>
+<pre>
+# Kali 虚拟机：192.168.142.162
+# 靶场地址：http://192.168.142.1/bafanglab
+
+# 1. 下载参数字典
+curl -s "<?php echo BASE_URL; ?>/includes/dict_download.php?type=params" -o dict_params.txt
+
+# 2. wfuzz 参数名 Fuzz（带过滤）
+wfuzz -c -z file,dict_params.txt --sh 131 "<?php echo site_url('modules/fuzz/index.php'); ?>?FUZZ=1"
+
+# 3. 找到 debug=1 时返回长度变 6458，source=1 时返回 17772（最大差异）
+</pre>

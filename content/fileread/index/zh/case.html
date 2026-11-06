@@ -1,0 +1,23 @@
+<table class="case-table">
+<thead>
+<tr><th>位置</th><th>影响</th></tr>
+</thead>
+<tbody>
+<tr>
+<td><code>*:8089/jenkins</code>，CVE-2024-23897 CLI @file（匿名）</td>
+<td>读取 <code>/root/.jenkins/secrets/initialAdminPassword</code>（得明文口令）及 <code>/etc/passwd</code></td>
+</tr>
+<tr>
+<td>POST <code>/magic/official/website/download</code>（filePath 参数，未授权）</td>
+<td>FileInputStream 读任意绝对路径，已读 <code>/etc/hostname</code>、<code>/etc/os-release</code>（K8s Pod service-air-province）</td>
+</tr>
+<tr>
+<td><code>/api/File/DownloadFile?Path=</code>（未授权）</td>
+<td>读 web.config、appsettings.json，泄露 MySQL root 凭据与 JWT 签名密钥，进而伪造管理员令牌接管后台</td>
+</tr>
+<tr>
+<td>禅道 12.5.2 <code>/zentao/file-read-&lt;id&gt;.html</code>（未授权 IDOR）</td>
+<td>按 fileID 遍历下载服务器全部附件（Word/PDF/PNG 等业务文档）</td>
+</tr>
+</tbody>
+</table>

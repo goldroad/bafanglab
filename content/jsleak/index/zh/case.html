@@ -1,0 +1,31 @@
+<table class="case-table">
+<thead>
+<tr><th>位置</th><th>影响</th></tr>
+</thead>
+<tbody>
+<tr>
+<td><code>studio.*.com/assets/index-57de800c.js</code></td>
+<td>JS 中硬编码 API 签名私钥（AES-ECB <code>WTAHAPPYACTIVITY</code>，appId=1），可离线伪造签名未授权调用 GraphQL API，获取七牛 OSS 上传凭证实现任意文件上传</td>
+</tr>
+<tr>
+<td><code>m.*.com/static/js/app.73cbcd8e.js</code></td>
+<td>移动端 API 签名密钥硬编码；同站 <code>/config/get/generalConfig</code> 未授权返回阿里云 OSS AccessKey/SecretKey，可读写删生产桶 dka-learn</td>
+</tr>
+<tr>
+<td><code>*.com/statics/js/app.3eb7f975.js</code></td>
+<td>硬编码 Dify 生产 API Key（<code>app-1deXHDnR0QLFuZLfc1BteQWF</code>），未授权访问"AI商旅助手"：60+ 字段配置、用户会话与对话内容、完整工作流（内部 API 端点/K8s 服务名）</td>
+</tr>
+<tr>
+<td><code>*.com/wms/jmreport/desreport_/js/biz/SignMd5Util.js</code></td>
+<td>硬编码 signatureSecret=<code>aa05f1c...</code>，伪造 X-Sign 绕过积木报表动态 SQL 接口签名保护，实测任意 SQL 查询解析成功</td>
+</tr>
+<tr>
+<td><code>yoo.m.*.com/assets/index-DS2plqbg.js</code></td>
+<td>硬编码 apiId+apiKey，伪造 HMAC-SHA256 签名调用受保护接口，未授权获取百度 BOS 上传凭证并上传任意文件至 <code>yoo-agents2.gz.*.com</code></td>
+</tr>
+<tr>
+<td><code>*.com/assets/pages-home-index.c6eace29.js</code></td>
+<td>打包 JS 硬编码后端配置密钥与账号（loginId=supersa、secret=<code>#$$mingjie.zhang$$#</code>、short=0C686FB1...），无需认证即可下载</td>
+</tr>
+</tbody>
+</table>

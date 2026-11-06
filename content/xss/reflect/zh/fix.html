@@ -1,0 +1,7 @@
+<h4>修复方法</h4>
+<ul>
+<li>输出编码是根本：HTML 上下文用 <code>htmlspecialchars</code>（ENT_QUOTES）、属性用引号包裹、JS 上下文用 <code>json_encode</code>。</li>
+<li>不要用黑名单过滤（<code>str_replace</code> 过滤 script）来"修复" XSS。</li>
+<li>启用 CSP（Content-Security-Policy），减少脚本可控来源。</li>
+<li>敏感 Cookie 设置 <code>HttpOnly</code>，降低被窃取的风险。</li>
+</ul>

@@ -1,0 +1,7 @@
+<h4>修复方法</h4>
+<ul>
+<li>避免调用系统命令；必须调用时使用参数数组形式（如 <code>proc_open</code> 数组参数），不做字符串拼接。</li>
+<li>对输入做严格白名单校验（例如 IP 必须是合法 IP 格式）。</li>
+<li>使用 <code>escapeshellarg()</code>/<code>escapeshellcmd()</code> 转义参数，但不要只依赖它。</li>
+<li>Web 进程使用低权限账号运行，限制可执行命令与出网能力。</li>
+</ul>

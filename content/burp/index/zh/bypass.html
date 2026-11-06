@@ -1,0 +1,6 @@
+<h4>绕过技巧</h4>
+<ul>
+<li><b>role 被服务端校验</b>：改 Cookie/JWT 里的角色、加 <code>X-Role: admin</code> 头、把 <code>admin</code> 写成 <code>ADMIN</code>、或用数组 <code>role[]=admin</code>。</li>
+<li><b>只靠前端展示</b>：直接请求后端接口，删掉 role 参数看服务端给的默认角色。</li>
+<li><b>参数污染</b>：<code>?role=user&amp;role=admin</code>，观察服务端取第一个还是最后一个值。</li>
+</ul>

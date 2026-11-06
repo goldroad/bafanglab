@@ -1,0 +1,12 @@
+<h4>漏洞描述</h4>
+<p>任意文件读取（目录穿越/Path Traversal）指程序用用户输入拼接文件路径，未过滤 <code>../</code> 或绝对路径，导致可以读取 Web 目录之外的文件，如配置文件、数据库口令、系统文件、日志，为后续提权提供关键信息。</p>
+<h4>漏洞危害</h4>
+<p>任意文件读取直接掀开了服务器的"底牌"：数据库配置、源码、私钥、/etc/shadow、历史备份均可被下载，攻击者据此拖库、登录后台、横向渗透其他系统；读取日志与 session 文件还能劫持在线用户会话。此类漏洞利用零门槛、几乎无痕迹，是攻防演练中最常被用来"开门红"的漏洞之一。</p>
+<h4>挖掘技巧与经验</h4>
+<ul>
+<li>常见参数：<code>file</code>、<code>filename</code>、<code>path</code>、<code>download</code>、<code>template</code>、<code>lang</code>。</li>
+<li>先判断是相对路径还是绝对路径：相对路径用 <code>../</code> 逐级尝试，注意当前脚本所在目录也算一层。</li>
+<li>编码绕过：<code>%2e%2e%2f</code>、双重编码 <code>%252e%252e%252f</code>、<code>..\</code>（Windows）、<code>....//</code>。</li>
+<li>有后缀限制时尝试空字节截断（PHP &lt; 5.3.4）、<code>?file=x.php/../config.php</code>、路径参数截断。</li>
+<li>高价值目标：<code>config.php</code>、<code>.env</code>、<code>web.config</code>、数据库配置、SSH 私钥、<code>/etc/passwd</code>、<code>C:/Windows/win.ini</code>。</li>
+</ul>

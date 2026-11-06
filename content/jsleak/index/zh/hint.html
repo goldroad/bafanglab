@@ -1,0 +1,13 @@
+<div class="hint-thought">
+<h4>思路提示</h4>
+<p>前端 JS 中往往硬编码了敏感信息（API 密钥、接口地址等）。思路：打开浏览器 F12 &rarr; Sources，找到页面加载的 <code>app.js</code>，全局搜索关键词（如 <code>accessKey</code>、<code>AK</code>、<code>oss</code>），找到云存储的 AccessKeyId 和 AccessKeySecret，填入表单验证即可。</p>
+</div>
+<details class="hint-detail">
+<summary>详细解题过程（点击展开）</summary>
+<div>
+<b>方法1：</b>浏览器按 F12 &rarr; Sources &rarr; 找到 <code>app.js</code>，搜索 <code>accessKey</code>。<br>
+<b>方法2：</b>Burp Proxy &rarr; HTTP history 过滤 <code>.js</code>，右键 Response 查看内容。<br>
+<b>方法3：</b>直接访问 <code><?php echo BASE_URL; ?>/modules/jsleak/assets/app.js</code>，全局搜索 <code>AK</code> 或 <code>oss</code>。<br>
+找到的 <code>accessKeyId</code> 与 <code>accessKeySecret</code> 原样填入表单即可。
+</div>
+</details>

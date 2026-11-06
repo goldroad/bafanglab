@@ -1,0 +1,7 @@
+<h4>修复方法</h4>
+<ul>
+<li>入库前不做"过滤"式修复，应在<b>输出时</b>按上下文转义（推荐 <code>htmlspecialchars</code> + ENT_QUOTES）。</li>
+<li>富文本场景使用成熟的白名单过滤器（如 HTMLPurifier），禁止 <code>script</code>、<code>on*</code> 事件、<code>javascript:</code>。</li>
+<li>Cookie 设置 <code>HttpOnly</code>、<code>SameSite</code>，并启用 CSP 作为纵深防御。</li>
+<li>后台等敏感页面严格校验来源与权限，避免一个 XSS 直接变成后台沦陷。</li>
+</ul>

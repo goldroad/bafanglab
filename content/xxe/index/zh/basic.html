@@ -1,0 +1,34 @@
+<h4>XML 是什么</h4>
+<p>XML（Extensible Markup Language，可扩展标记语言）用成对的标签描述结构化数据，标签名由使用者自定义，因此既能表达数据本身，也能表达数据之间的层级关系。一个 XML 文档通常包含：</p>
+<ul>
+<li><b>XML 声明</b>：<code>&lt;?xml version="1.0" encoding="UTF-8"?&gt;</code>，说明版本与编码，必须位于文档最前。</li>
+<li><b>根元素</b>：整个文档只能有一个根元素，其余元素都嵌套在它内部。</li>
+<li><b>元素与属性</b>：<code>&lt;user id="1"&gt;alice&lt;/user&gt;</code>，元素承载内容，属性补充描述。</li>
+<li><b>DTD</b>：Document Type Definition，定义元素/属性的合法结构，也可声明实体（ENTITY）；外部实体正是 XXE 的入口。</li>
+<li><b>命名空间</b>：<code>xmlns</code> 用于区分不同来源的同名标签，避免冲突。</li>
+</ul>
+<pre>&lt;?xml version="1.0" encoding="UTF-8"?&gt;
+&lt;!DOCTYPE users [
+  &lt;!ENTITY company "八方网域"&gt;
+]&gt;
+&lt;users&gt;
+  &lt;user id="1"&gt;
+    &lt;name&gt;alice&lt;/name&gt;
+    &lt;org&gt;&amp;company;&lt;/org&gt;
+  &lt;/user&gt;
+&lt;/users&gt;</pre>
+<p>典型用途包括：配置文件（web.xml、pom.xml、AndroidManifest.xml）、数据交换（SOAP/WebService、SAML、RSS）、文档格式（DOCX/XLSX/SVG 本质都是 XML 的压缩包或文本）、以及企业系统之间的集成报文。</p>
+<p>早期大量系统选择 XML 做通信与配置，原因很实际：<b>跨平台、跨语言</b>——文本格式在任何操作系统和语言里都能读写；<b>自描述</b>——标签名直接表达字段含义，不依赖额外协议文档；<b>结构可校验</b>——可用 DTD / XSD 约束字段与层级，便于企业集成时对齐接口；<b>工具链成熟</b>——SOAP/WebService 时代的企业集成、配置标准化与文档格式都围绕 XML 建立；<b>解析器内置</b>——Java、.NET、PHP、Python 等语言都自带 XML 解析器，开箱即用。</p>
+<p>问题也出在这里：XML 规范允许 DTD 声明实体，实体又可以用 <code>SYSTEM</code> 指向一个外部 URI（文件或网络地址），而不少解析器（尤其 Java 的老版本）<b>默认会加载并替换外部实体</b>。当解析器处理用户可控的 XML 时，攻击者就能用外部实体读本地文件或发起带外请求——这正是 XXE 的由来，也解释了为什么现代解析器普遍要求显式开启外部实体、默认禁用。</p>
+<h4>漏洞描述</h4>
+<p>XXE（XML External Entity，XML 外部实体注入）指 XML 解析器在处理用户可控的 XML 文档时，未禁用 DTD 与外部实体，攻击者通过 <code>&lt;!ENTITY&gt;</code> 声明读取本地文件、借外部实体让解析器向指定地址发起请求（XXE→SSRF 链式利用）、甚至造成拒绝服务（Billion Laughs）。</p>
+<h4>漏洞危害</h4>
+<p>XXE 可造成多重严重危害：读取服务器任意文件（/etc/passwd、源码、配置文件中的数据库口令）；通过外部实体让 XML 解析器向攻击者指定或内网地址发起请求，从而被当作 SSRF 的一种触发途径——需要强调的是，<b>SSRF 与 XXE 是两个不同的漏洞</b>：SSRF 的成因是服务端对用户可控的 URL 发起请求且未做地址校验，XXE 的成因是 XML 解析器未禁用外部实体，二者成因、触发点与修复手段都不同，这里只是形成「XXE 触发服务端请求 → 达到 SSRF 效果」的链式利用，不能把二者混为一谈；此外还可构造 DTD 发起拒绝服务（Billion Laughs）；特定环境下配合 expect:// 等协议可直接执行命令。云环境中读取元数据接口还能窃取临时凭证，接管整个云账号。</p>
+<h4>挖掘技巧与经验</h4>
+<ul>
+<li>凡是 <code>Content-Type: application/xml</code> 或请求体是 XML 的接口（SOAP、上传解析、SVG/DOCX 解析、SAML 登录）都要测 XXE。</li>
+<li>先试内部 DTD 声明外部实体读文件：<code>&lt;!ENTITY xxe SYSTEM "file:///C:/Windows/win.ini"&gt;</code>，再把 <code>&amp;xxe;</code> 放进会被回显的元素里。</li>
+<li>读 PHP/JSP 等源码会带 <code>&lt;</code> <code>&amp;</code>，直接替换会破坏 XML 结构导致解析报错，改用 <code>php://filter/read=convert.base64-encode/resource=...</code> 先编码再读。</li>
+<li>无回显场景用 OOB（带外通道）：实体指向自己的 VPS 或 dnslog，观察是否收到请求。</li>
+<li>常见的库默认行为不同：PHP 的 DOM/SimpleXML 需 <code>LIBXML_NOENT</code> 才替换实体；Java 老款解析器默认开启外部实体，危害更大。</li>
+</ul>

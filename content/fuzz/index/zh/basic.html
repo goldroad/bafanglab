@@ -1,0 +1,11 @@
+<h4>漏洞描述</h4>
+<p>我们挖掘 XSS、SQL 注入、XXE、命令注入、反序列化等漏洞时，找到可以接收值的参数非常关键。参数 Fuzz（隐藏参数发现）指系统存在未在页面公开、但服务端会处理的参数，如 <code>debug</code>、<code>admin</code>、<code>source</code>、<code>test</code>。这类参数一旦被猜出，往往可直接获得调试信息、源码或管理视角，属于"隐藏功能被滥用"。</p>
+<h4>挖掘技巧与经验</h4>
+<ul>
+<li>Burp 插件 Param Miner 可全自动跑参数名与参数值，效率最高。</li>
+<li>手工思路：JS 文件里搜 <code>url:</code>、<code>fetch(</code>、<code>ajax</code>，接口文档、Swagger、错误堆栈里常残留参数名。</li>
+<li>爆破参数名时看<b>响应长度、状态码、关键字</b>的差异，不要只看有无报错。</li>
+<li>常见隐藏参数：debug、test、dev、admin、isadmin、source、backup、token、callback、format。</li>
+<li>同类思路可扩展到 GET/POST/Cookie/JSON Body 任意位置。</li>
+<li><b>本关的响应反馈：</b>未带任何已知参数时返回「请输入查询条件」；参数名存在但值不对时返回「找不到对应的数据」；参数名与值都正确时才返回对应内容，多个正确条件会叠加显示。</li>
+</ul>

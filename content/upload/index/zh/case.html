@@ -1,0 +1,15 @@
+<table class="case-table">
+<thead>
+<tr><th>位置</th><th>影响</th></tr>
+</thead>
+<tbody>
+<tr>
+<td>POST <code>/api/upload/video</code>（匿名，无任何校验）</td>
+<td>已确认 getshell：上传 .aspx/.ashx/.php 原样落盘 <code>/upload/video/</code> 并被执行，whoami=iis apppool\ezd_cms，Windows Server 2008 R2；读取 web.config 获 MySQL root/root 与物理路径</td>
+</tr>
+<tr>
+<td>POST <code>http://ai.*.cn:8000/ksai/portal/api/fileUp</code>（未授权）</td>
+<td>成功上传 shell.php/shell.phtml（含 shell_exec whoami 内容）至 <code>/website*.php</code> 路径</td>
+</tr>
+</tbody>
+</table>

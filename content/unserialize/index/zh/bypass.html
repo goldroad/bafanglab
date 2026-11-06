@@ -1,0 +1,8 @@
+<h4>绕过技巧</h4>
+<ul>
+<li><b>字符串长度必须精确</b>：属性值含中文/特殊字符时按字节计算，长度写错会反序列化失败（<code>@unserialize</code> 静默返回 false）。</li>
+<li><b>__wakeup 被拦截</b>：利用 CVE-2016-7124 思路，把属性个数写成大于实际数量，可绕过 <code>__wakeup</code> 触发 <code>__destruct</code>。</li>
+<li><b>过滤 <code>O:</code></b>：改用 <code>C:</code> 自定义序列化、<code>a:</code> 数组结构，或用 <code>%00</code> 前缀构造私有/受保护属性。</li>
+<li><b>Cookie 传参破坏 payload</b>：base64 中的 <code>+</code>、<code>=</code> 必须 URL 编码为 <code>%2B</code>、<code>%3D</code>。</li>
+<li><b>找不到现成类</b>：用 phpggc 生成流行框架的 POP 链；本关只需构造 <code>Logger</code> 即可完成任意文件写。</li>
+</ul>

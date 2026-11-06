@@ -1,0 +1,35 @@
+<h4>漏洞描述</h4>
+<p>报错注入（Error-based SQL injection）适用于"页面不回显数据、但会把数据库报错原样输出"的场景。攻击者故意构造一个必然失败的表达式（<code>updatexml</code>、<code>extractvalue</code>、<code>floor(rand(0)*2)</code> 等），把子查询的结果拼进报错信息，再通过"错误信息"这条通道把数据带出来。</p>
+<p>本关后端执行的语句是：<code>SELECT id, username, role FROM users WHERE username = '$name'</code>，字符型参数、单引号包裹、MySQL 数据库，且 <code>mysqli_error()</code> 的结果被直接输出到页面。页面不会把查到的字段显示出来，只会回答"用户存在 / 不存在"。</p>
+
+<h4>漏洞危害</h4>
+<p>报错注入的危害与普通注入同级：攻击者可以逐条读出管理员账号、密码哈希、密钥等数据，离线破解后进入后台；泄露的数据库版本、库名、绝对路径还能为写文件、拿服务器做铺垫。报错信息本身就是信息泄露，把内部实现细节免费送给攻击者，显著降低后续利用门槛。</p>
+
+<h4>适用场景与判断方法</h4>
+<ul>
+<li>输入一个单引号 <code>admin'</code>，页面出现 <code>You have an error in your SQL syntax</code> 一类的 MySQL 报错 &rarr; 说明引号未过滤、报错回显开启，优先尝试报错注入。</li>
+<li>页面不显示查询结果（本关只回答存在与否）&rarr; 无法用 <code>union select</code>，改用报错函数把数据"夹带"出来。</li>
+<li>常用三种报错函数：<code>updatexml()</code>、<code>extractvalue()</code>、<code>floor(rand(0)*2)</code> 配合 <code>group by</code> 制造主键冲突。</li>
+<li>MySQL 的报错内容通常被截断在 32 字节左右，超长数据用 <code>substr()</code> 分段读取。</li>
+<li>若生产环境关闭了错误回显（<code>display_errors=Off</code>），报错注入失效，应转布尔盲注或时间盲注。</li>
+</ul>
+
+<h4>挖掘技巧与经验</h4>
+<ul>
+<li>闭合方式：参数被单引号包裹，payload 用 <code>'</code> 先闭合，末尾用 <code>-- -</code>（或 <code>#</code>）注释掉多余的单引号；<code>--</code> 后面必须跟一个空格。</li>
+<li><code>0x7e</code> 就是字符 <code>~</code>，把它放在数据前面作为标记，方便在报错文本里一眼找到数据起点。</li>
+<li>最省事的注入确认：<code>?name=' or updatexml(1,concat(0x7e,version()),1)-- -</code>，报错里出现版本号即证明注入成功。</li>
+<li>读数据先探长度（<code>length()</code>）再分段取（<code>substr()</code>），避免报错截断导致数据缺尾。</li>
+<li>sqlmap 的 <code>--technique=E</code> 只跑报错注入，命中率与速度都不错。</li>
+</ul>
+
+<h4>本关目标</h4>
+<p>数据库为 <code>bafanglab</code>，目标表 <code>secrets</code>，字段 <code>secret</code>。用报错函数把 <code>secrets</code> 里的通关凭证读出来，报错信息一般形如 <code>XPATH syntax error: '~恭喜你完成本关挑战！'</code>。</p>
+
+<h4>修复思路</h4>
+<ul>
+<li>使用参数化查询（PDO / MySQLi prepared statement），从根上消除拼接。</li>
+<li>生产环境关闭错误回显，错误只写服务端日志，对外返回统一提示。</li>
+<li>数据库账号最小权限，禁止业务账号拥有 FILE、DROP 等高危权限。</li>
+<li>输入侧做类型与白名单校验，配合 WAF 做纵深防御。</li>
+</ul>

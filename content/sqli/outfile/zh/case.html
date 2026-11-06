@@ -1,0 +1,33 @@
+<table class="case-table">
+<thead>
+<tr><th>场景</th><th>利用方式</th><th>结果</th></tr>
+</thead>
+<tbody>
+<tr>
+<td>某企业官网商品详情页 <code>/product/detail?id=</code>（数字型注入，MySQL 5.7，数据库账号具备 FILE 权限）</td>
+<td><code>UNION SELECT ... INTO OUTFILE</code> 向站点根目录写入 <code>shell.php</code> 一句话木马</td>
+<td>获取 WebShell，进一步读取数据库配置、横向移动，服务器沦陷</td>
+</tr>
+<tr>
+<td>某 CMS 后台统计接口 <code>report.php?type=</code>（未过滤拼接）</td>
+<td>先 <code>order by</code> 猜列数，再 <code>UNION SELECT</code> 写入伪装成图片的 <code>.php</code> 文件到 upload 目录</td>
+<td>绕过上传点限制，落地可执行脚本，获取管理员权限</td>
+</tr>
+<tr>
+<td>某政务系统 <code>/news?id=</code>（MySQL root 账号、<code>secure_file_priv</code> 为空）</td>
+<td><code>LOAD_FILE()</code> 读取 <code>config.php</code> 与 MySQL <code>my.ini</code>，配合 <code>HEX()</code> 绕过编码问题</td>
+<td>泄露数据库口令、内网地址与文件配置，扩大攻击面</td>
+</tr>
+<tr>
+<td>某论坛搜索接口 <code>search.php?keyword=</code>（字符型注入、WAF 仅拦截 union 关键字）</td>
+<td>使用 <code>/*!50000union*/</code> 与十六进制路径绕过 WAF，写入 flag 文件后通过 Web 访问</td>
+<td>WAF 规则被绕过，敏感数据被落盘并可直接下载</td>
+</tr>
+<tr>
+<td>某在线教育平台作业提交接口（<code>INSERT</code> 注入，返回列数不稳定）</td>
+<td>改用 <code>INTO OUTFILE</code> 不依赖回显，把查询结果写入可访问目录后读取</td>
+<td>在完全无回显的注入点上完成数据外带与文件落地</td>
+</tr>
+</tbody>
+</table>
+<p class="desc">以上案例均来自公开漏洞库与授权测试项目的脱敏记录，仅保留漏洞位置与利用方式用于教学。实际防守中，应同时收紧数据库 <code>FILE</code> 权限、<code>secure_file_priv</code> 与 Web 目录执行权限，三者缺一都可能被突破。</p>

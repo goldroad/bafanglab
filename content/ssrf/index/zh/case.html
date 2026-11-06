@@ -1,0 +1,51 @@
+<table class="case-table">
+<thead>
+<tr><th>位置</th><th>影响</th></tr>
+</thead>
+<tbody>
+<tr>
+<td><code>/mk-leads/search/pic-product-upload?imgUrl=</code>（未授权）</td>
+<td>全读回显 SSRF，已读阿里云 ECS 元数据：主机名 *-mk-online01、实例 i-uf6f3q1****38tgca4x8、私网 10.20.31.52、VPC/账号 ID</td>
+</tr>
+<tr>
+<td>kkFileView v4.0.0 <code>/getCorsFile?urlPath=</code>（未授权）</td>
+<td>读取 ECS 元数据：hostname=hjg.ops、实例 i-wz90ty****h9pan6olcl、私网 172.18.202.53、账号 127623****916382</td>
+</tr>
+<tr>
+<td>YApi <code>/api/project/swagger_url?url=</code>（登录后）</td>
+<td>回显式读取元数据（实例 i-2zeaff2****8nbe7g3g0、私网 172.16.0.236），可探测内网（172.16.1.62:9002 可达）</td>
+</tr>
+<tr>
+<td>kkFileView <code>/preview/onlinePreview?url=</code>（base64）</td>
+<td>SSRF：服务端抓取并回显任意 URL 内容（实测取回 106KB 文件），可按路径回读本机 Web 文件，可读内网资源</td>
+</tr>
+<tr>
+<td>积木报表 <code>/wms/jmreport/testConnection</code>（admin JWT）</td>
+<td>任意 JDBC 连接 SSRF：可探内网 MySQL(192.168.1.199:3306)、本机 1433，为 JDBC 反序列化 RCE 铺路</td>
+</tr>
+<tr>
+<td><code>/v1/board/upload_file_intel?path=</code></td>
+<td>SSRF+完整外带闭环：抓取内容转存金山云 KS3 公开可读，已验证可触达 127.0.0.1 内部端口</td>
+</tr>
+<tr>
+<td>UEditor 1.4.3 <code>/plugins/ueditor/php/controller.php?action=catchimage</code>（未授权）</td>
+<td>服务端抓取任意 URL（字节数回显证实），catcherLocalDomain 仅拦 127.0.0.1/localhost</td>
+</tr>
+<tr>
+<td><code>/generate/clipper/whiten?url=</code></td>
+<td>无白名单，可打 127.0.0.1/169.254.169.254/100.100.100.200（元数据 404 原样回显）</td>
+</tr>
+<tr>
+<td><code>/auth/ai/token?url=</code>（未授权）</td>
+<td>回显内网 RabbitMQ:15672、MinIO:9000 响应；另一接口 <code>/api/v1/volume/calculate-url</code> 盲打元数据可达</td>
+</tr>
+<tr>
+<td><code>/api/img-type-recognize?imgUrl=</code>（硬编码 token）</td>
+<td>盲 SSRF：稳定触达阿里云元数据 100.100.100.200:80，可探测内网拓扑/端口</td>
+</tr>
+<tr>
+<td><code>/med/proxy/{appId}/safeProxyPage?a=</code>(AES-192)</td>
+<td>最高危：nip.io 绕过私网校验，窃取 RAM STS 临时凭据（KubernetesWorkerRole），已通过阿里云 OpenAPI 鉴权枚举 ECS 实例</td>
+</tr>
+</tbody>
+</table>

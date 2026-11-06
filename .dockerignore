@@ -1,0 +1,7 @@
+# 构建上下文排除项（不影响 .git —— 目录扫描关卡依赖 /.git 被 403 拦截）
+data/
+__pycache__/
+.screenshots/
+dev.log
+*.tar.gz
+*.zip

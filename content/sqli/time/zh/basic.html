@@ -1,0 +1,14 @@
+<h4>漏洞描述</h4>
+<p>时间盲注（Time-based Blind SQL Injection）是盲注的最后手段：当页面既不回显数据、不回显报错、连真假状态都无法区分时，用 <code>sleep()</code>、<code>benchmark()</code>、<code>heavy query</code> 制造可观测的延迟，以响应时间作为"真假信号"。</p>
+<h4>漏洞危害</h4>
+<p>时间盲注是最隐蔽的注入形式：页面无任何差异，仅靠响应延时逐位推断数据，几乎不触发任何告警。但危害丝毫不减——攻击者挂机跑脚本即可拖走全库。此类注入常残留在"修复过"的站点中，是数据悄无声息泄露的典型通道。</p>
+<h4>挖掘技巧与经验</h4>
+<ul>
+<li>先建立基线：正常请求耗时多少？再提交 <code>and sleep(3)</code> 看是否明显变慢。</li>
+<li>MySQL 用 <code>if(条件, sleep(3), 0)</code>；SQL Server 用 <code>waitfor delay '0:0:3'</code>；PostgreSQL 用 <code>pg_sleep(3)</code>、Oracle 用 <code>dbms_lock.sleep(3)</code>。</li>
+<li>延迟时间要适中（2~5 秒），太短易受网络抖动干扰，太长则整体耗时爆炸。</li>
+<li>网络不稳定时多次采样取平均；也可改用 <code>benchmark(1000000, md5('x'))</code> 制造 CPU 延迟。</li>
+<li>脚本化最佳：sqlmap <code>--technique=T</code>，或自己写 Python 循环，二分法 + 多线程提速。</li>
+</ul>
+<h4>更多练习场景</h4>
+<p>如果需要练习更多场景，请安装 sqli-labs 靶场：<a href="https://github.com/skyblueee/sqli-labs-php7" target="_blank" rel="noopener noreferrer">https://github.com/skyblueee/sqli-labs-php7</a></p>

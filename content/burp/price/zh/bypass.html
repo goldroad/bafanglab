@@ -1,0 +1,7 @@
+<h4>绕过技巧</h4>
+<ul>
+<li><b>服务端按 price 计算</b>：改商品 ID 与价格的组合，测"低价商品 ID + 高价商品展示"。</li>
+<li><b>数量与折扣</b>：试 <code>quantity=-1</code>、<code>discount=100</code>、<code>total=0</code>。</li>
+<li><b>币种/单位差异</b>：加 <code>currency=JPY</code> 之类的字段换取更小金额。</li>
+<li><b>支付成功状态由响应决定</b>：拦截响应，把失败状态改成成功。</li>
+</ul>

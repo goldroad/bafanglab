@@ -1,0 +1,8 @@
+<h4>绕过技巧</h4>
+<ul>
+<li><b>过滤 <code>../</code></b>：用 <code>....//</code>（删除后仍会拼回 <code>../</code>）、<code>..%2f</code>、<code>%252e%252e%252f</code>、Windows 的 <code>..\</code>。</li>
+<li><b>过滤绝对路径</b>：改用相对穿越 <code>../../../../etc/passwd</code>，或编码盘符 <code>C:%5cWindows%5cwin.ini</code>。</li>
+<li><b>后缀限制</b>：<code>%00</code> 截断（老 PHP）、<code>config.php/../config.php</code> 路径混淆、末尾加 <code>?x=.txt</code>。</li>
+<li><b>参数污染</b>：<code>?file=readme.txt&amp;file=../../config.php</code>（PHP 默认取最后一个值）。</li>
+<li><b>白名单映射型</b>：如果只接受 ID，尝试负数、超大 ID、数组形式 <code>file[]=</code> 触发类型混淆。</li>
+</ul>

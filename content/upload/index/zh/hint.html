@@ -1,0 +1,17 @@
+<div class="hint-thought">
+<h4>思路提示</h4>
+<p>文件上传的核心是<b>服务端只校验了扩展名黑名单</b>，可以绕过。思路分几条路：① 试试黑名单没覆盖的扩展名（如 <code>.pht</code>、<code>.phar</code>、<code>.php7</code>）；② 利用 Apache 多扩展名解析（如 <code>shell.php.jpg</code>）；③ 上传 <code>.htaccess</code> 让 Apache 把 <code>.jpg</code> 当 PHP 执行；④ 配合文件包含关，传内容为 PHP 代码的图片马再包含执行。先看源码确认黑名单具体有哪些扩展名。</p>
+</div>
+<details class="hint-detail">
+<summary>详细解题过程（点击展开）</summary>
+<div>
+<b>源码逻辑：</b>取最后一个 . 后的扩展名，黑名单：php/php3/php4/php5/phtml<br>
+<b>绕过思路：</b><br>
+1. <b>大小写绕过</b>：<code>shell.PHP</code>、<code>shell.Php</code>（黑名单全是小写比较前的 strtolower 已处理大小写？观察代码！实际上代码做了 strtolower，所以换思路）<br>
+2. <b>特殊扩展名</b>：试试 <code>.pht</code>、<code>.phar</code>、<code>.php7</code>（不在黑名单，取决于 Apache 是否解析）<br>
+3. <b>Apache 多扩展名解析</b>：<code>shell.php.jpg</code>（某些 Apache 配置会从右向左识别，遇到不认识的就向左继续，最终按 php 执行）<br>
+4. <b>.htaccess</b>：先传 <code>.htaccess</code>（内容 <code>AddType application/x-httpd-php .jpg</code>），再传图片马 shell.jpg<br>
+5. <b>配合文件包含</b>：上传内容为 PHP 代码的 .jpg 图片马，到模块10 文件包含里包含它即可执行<br>
+<b>WebShell：</b><code>&lt;?php @eval($_POST['cmd']);?&gt;</code> 然后用蚁剑/冰蝎连接
+</div>
+</details>

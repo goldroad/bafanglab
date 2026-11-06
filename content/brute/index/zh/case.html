@@ -1,0 +1,83 @@
+<table class="case-table">
+<thead>
+<tr><th>位置</th><th>影响</th></tr>
+</thead>
+<tbody>
+<tr>
+<td><code>http://*:3000/kefu-api/login</code></td>
+<td>内部客服系统弱口令 admin/admin123，取得管理员 JWT，接管"*AI智能客服系统"全部敏感数据</td>
+</tr>
+<tr>
+<td><code>crm.*.com/api/auth/login</code></td>
+<td>admin:admin123 登录 CRM，获取 745 家企业客户、256 份合同、735 条商机（含姓名+手机号）、85 张发票、516 条银行流水、10 名员工数据，跨 3 个组织；另获发票系统有效 appKey+appSecret</td>
+</tr>
+<tr>
+<td><code>api.*.com/admin</code></td>
+<td>Laravel Admin 后台 admin/123456 登录成功，可用户管理、系统设置、导出用户数据</td>
+</tr>
+<tr>
+<td><code>forum.*.com/api/token</code></td>
+<td>*论坛管理员 */*123（用户名是企业域名大写字母，密码包含企业域名小写字母），取得管理员 Token 完全接管论坛</td>
+</tr>
+<tr>
+<td><code>*.com/admin/login</code></td>
+<td>admin/admin123 第 2 次爆破即成功，获取 17 个系统用户姓名账号、1 条联系人手机邮箱，全后台可控</td>
+</tr>
+<tr>
+<td>Redis <code>222.*.*.123:16379</code></td>
+<td>Redis 弱口令 <code>qwer1234Shyy3209</code> 公网登录，读 db0 424 + db1 4171 个 key，含 141 个 JWT 会话 token（25+ 真实用户名），写删权限验证成功</td>
+</tr>
+<tr>
+<td><code>https://*:8443</code>（Gitblit v1.10.0）</td>
+<td>默认凭据 admin/admin 登录，取得管理员权限，可访问 Quotation.git 报价单源码仓库</td>
+</tr>
+<tr>
+<td><code>wpsp.*.com/adminapi/login</code></td>
+<td>***Cloud 后台默认 admin/admin123，取得 uid=1 管理员 JWT（7 天有效）</td>
+</tr>
+<tr>
+<td><code>b.*.world/admin123/wel/</code></td>
+<td>*OA 默认口令 admin:888888 登录，取得管理员/财务/发票/库存等全部 OA 管理功能</td>
+</tr>
+<tr>
+<td><code>*.com/dev-api/login</code></td>
+<td>验证码可爆破+弱口令：admin/admin123 取得全权 JWT；xaadmin/123456 持 78 项管理员权限，可重置任意账户口令</td>
+</tr>
+<tr>
+<td><code>*.com/api/druid/submitLogin</code> 及 MySQL <code>114.*.*.140:3306</code></td>
+<td>Druid 监控台默认 admin/admin 登录，读取 321 条会话/数据源配置</td>
+</tr>
+<tr>
+<td><code>*:8011 /User/Login</code> 及 MSSQL 1433</td>
+<td>弱口令 normal/123456、guest/654321 可登录选房系统；sa/!QAZ2wsx 登录 MSSQL sysadmin，读取 1439 条含身份证/手机号的 PII</td>
+</tr>
+<tr>
+<td>内网 <code>*:6379</code> Redis</td>
+<td>弱口令 redis53 认证成功，可读写全部库并修改 CONFIG（可 RDB 写文件落地）</td>
+</tr>
+<tr>
+<td><code>*:27087 /login</code> 及 <code>wms.*.com.cn/wms/sys/login</code></td>
+<td>mrd_pay 后台 admin/admin123 取得超管 JWT，泄露 113688 笔支付订单；JeecgBoot admin/123456 取得管理员 JWT，可创建后门账号/重置任意密码/Excel 导出</td>
+</tr>
+<tr>
+<td><code>gongre.*-link.com/api/auth/login</code></td>
+<td>胚体生产追溯平台 admin:123456，取得超管 JWT（roleCode=ADMIN, dataScope=ALL），无验证码无锁定</td>
+</tr>
+<tr>
+<td><code>*.com/app/public/admin/user/login.html</code></td>
+<td>admin/123456 登录体验申请管理系统，遍历约 2058 条客户 PII（姓名/职位/手机/邮箱/公司）</td>
+</tr>
+<tr>
+<td><code>api.*.com/maintain-api/.../openApi/login</code></td>
+<td>admin 弱口令 <code>!@#$%^</code> 约 240 次爆破成功，取得 accessToken/refreshToken 完整账户接管（无速率限制/锁定）</td>
+</tr>
+<tr>
+<td><code>*.com/api/admin/login</code></td>
+<td>administrator:00000000 爆破命中（约 2.9 万组合唯一命中），叠加 X-Forwarded-For 绕过锁定，取得后台全部管理权限</td>
+</tr>
+<tr>
+<td><code>basic.*.com/index</code> 登录</td>
+<td>默认口令 ******/123456 取得 token，进入内部车辆数据查询平台（维保/碰撞/违章/人车核验）；后续 SQLi 实证 108 万行保险数据、23.5 万保单含车主身份证</td>
+</tr>
+</tbody>
+</table>

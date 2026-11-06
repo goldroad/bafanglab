@@ -1,0 +1,7 @@
+<h4>绕过技巧</h4>
+<ul>
+<li><b>验证码可被 OCR 识别</b>：用 ddddocr / Tesseract 或 Burp OCR 插件自动识别，每次请求前拉取新验证码。</li>
+<li><b>验证码校验后不销毁</b>：若未一次性使用，固定一个验证码后无限复用，Intruder 只爆 password 字段。</li>
+<li><b>验证码可为空</b>：删除 <code>captcha</code> 参数、提交空值，观察逻辑是否跳过校验。</li>
+<li><b>只校验前端</b>：直接 POST 登录接口，绕过前端验证码输入框。</li>
+</ul>

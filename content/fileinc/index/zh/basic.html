@@ -1,0 +1,33 @@
+<h4>文件包含函数的作用</h4>
+<p>PHP 提供四个包含函数，作用都是把另一个文件的代码引入当前脚本执行，区别在于失败时的行为与是否重复包含：</p>
+<ul>
+<li><code>include</code>：包含文件，失败时只产生一条 Warning，脚本继续执行。</li>
+<li><code>require</code>：包含文件，失败时产生致命错误（Fatal error）并终止脚本，适合加载不可或缺的配置或类库。</li>
+<li><code>include_once</code>：与 include 相同，但会先检查该文件是否已被包含，已包含则跳过，避免函数/类重复定义。</li>
+<li><code>require_once</code>：与 require 相同，同样带"只包含一次"的去重判断，是加载配置、公共函数库最常用的写法。</li>
+</ul>
+<p>路径解析：包含路径可以是相对路径或绝对路径。相对路径会按当前工作目录与 <code>include_path</code> 配置依次查找；<code>./</code>、<code>../</code> 表示相对层级，绝对路径（如 <code>/var/www/config.php</code>）则直接定位。理解解析顺序，才能判断一个参数最终会落到哪个文件。</p>
+<p>典型用途：把页面公共头尾（header/footer）、数据库配置、模板片段、多语言文件拆成独立文件，在需要的页面 include 进来，减少重复代码、便于统一维护。</p>
+<pre>// 公共头尾与配置：只加载一次，缺失就应终止
+require_once __DIR__ . '/config.php';
+include __DIR__ . '/header.php';
+
+// 模板片段 / 多语言文件：允许缺失时继续
+include __DIR__ . '/lang/' . $lang . '.php';
+
+// 危险写法：路径来自用户参数，攻击者可用 ../ 或伪协议穿越
+include $_GET['page'];</pre>
+<p>当包含路径由用户可控的参数拼成（如 <code>?page=</code>、<code>?lang=</code>），攻击者用 <code>../</code> 跳到任意目录，或使用 <code>php://filter</code>、<code>data://</code> 等伪协议，就能读取源码甚至执行代码——文件包含漏洞正是这样从"方便的代码复用"变成"任意文件包含"。</p>
+<h4>漏洞描述</h4>
+<p>文件包含（LFI/RFI）指程序用用户可控的变量拼进 <code>include/require</code>，导致可以包含服务器上任意文件（本地文件包含）或远程文件（远程文件包含）。配合上传图片马、日志文件、<code>php://filter</code> 等技巧，可升级为代码执行或源码泄露。</p>
+<h4>漏洞危害</h4>
+<p>文件包含的危害取决于被包含的内容：本地包含（LFI）可读取源码、配置文件与日志，泄露数据库口令等核心机密；配合日志注入、图片马、session 文件等手法可直接执行代码拿下服务器；远程包含（RFI）更是引入外部恶意脚本一步拿 Shell。PHP 历史上大量 CMS 沦陷事件皆源于此漏洞。</p>
+<h4>挖掘技巧与经验</h4>
+<ul>
+<li>看到 <code>?page=</code>、<code>?file=</code>、<code>?lang=</code>、<code>?tpl=</code> 这类参数先测文件包含。</li>
+<li>读系统文件探路：Linux 用 <code>/etc/passwd</code>，Windows 用 <code>C:/Windows/win.ini</code>。</li>
+<li>读源码优先用 <code>php://filter/read=convert.base64-encode/resource=index.php</code>，避免代码被执行看不到内容。</li>
+<li>getshell 路径：上传图片马 → 包含执行；或包含 access.log 并让 UA 里带上 PHP 代码（日志包含）。</li>
+<li>相对路径注意层级：从当前脚本所在目录算起，<code>../</code> 数量不足/过多都会失败；多写几个 <code>../</code> 通常无害。</li>
+<li>PHP 伪协议：<code>php://input</code>（POST 数据当代码）、<code>data://</code>、<code>zip://</code>，需确认 <code>allow_url_include</code>。</li>
+</ul>

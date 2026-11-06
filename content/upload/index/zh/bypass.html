@@ -1,0 +1,8 @@
+<h4>绕过技巧</h4>
+<ul>
+<li><b>只校验 MIME-Type</b>（后端读取 <code>$_FILES['type']</code>）：Burp 抓包把 <code>Content-Type: image/jpeg</code> 再放行，文件内容仍是 PHP。</li>
+<li><b>黑名单扩展名</b>：<code>.pht</code>、<code>.phar</code>、<code>.php3</code>、<code>.php5</code>、<code>.phtml</code>、<code>.PHP</code>（大小写）、<code>shell.php.jpg</code>（Apache 多扩展名解析）。</li>
+<li><b>后缀双写</b>：<code>shell.pphphp</code>，过滤函数删掉一次 <code>php</code> 后仍能拼回 <code>php</code>。</li>
+<li><b>白名单 + 文件头（魔术字节）校验</b>：做<b>图片马</b>——<code>copy /b 1.jpg + shell.php shell.jpg</code>，或用 <code>GIF89a</code> 文件头，再配合文件包含执行。</li>
+<li><b>文件名解析绕过</b>：<code>shell.php%00.jpg</code>（PHP &lt; 5.3.4）、<code>shell.php/.</code>、<code>shell.php;</code>（IIS）、超长文件名截断、<code>Content-Disposition</code> 中 filename 编码变形。</li>
+</ul>

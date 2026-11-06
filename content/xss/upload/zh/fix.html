@@ -1,0 +1,12 @@
+<h4>修复方法</h4>
+<ul>
+<li><b>扩展名白名单</b>只放"不可执行"的类型（jpg/png/gif/webp），明确拒绝 html、htm、svg、xml、pdf、js、css。</li>
+<li><b>校验文件真实类型</b>：用 <code>getimagesize()</code> / <code>finfo_file()</code> 判断 MIME，防止把 HTML 改后缀伪装成图片。</li>
+<li><b>随机重命名</b>（如 <code>uniqid()</code>）+ 固定扩展名，用户无法控制保存路径与文件名。</li>
+<li><b>上传文件独立存放</b>：放对象存储或独立域名（如 <code>oss.example.com</code>），与主站<b>不同源</b>，即使被解析也拿不到主站 Cookie。</li>
+<li>响应头强制 <code>Content-Disposition: attachment</code>，让文件只下载不内联渲染。</li>
+<li>响应头加 <code>X-Content-Type-Options: nosniff</code>，阻止浏览器做 MIME 嗅探。</li>
+<li>响应头加 <code>Content-Security-Policy: default-src 'none'; sandbox</code>，即便被当 HTML 解析也执行不了脚本。</li>
+<li>上传目录在 Apache/Nginx 中禁用脚本与 HTML 解析（<code>php_flag engine off</code>、<code>RemoveHandler</code>）。</li>
+<li>若确实需要预览 SVG，用服务端转成 PNG（如 ImageMagick / rsvg-convert）后再输出。</li>
+</ul>

@@ -1,0 +1,8 @@
+<h4>绕过技巧</h4>
+<ul>
+<li><b>404 是自定义页面</b>：用 <code>ffuf -fs 页面大小</code> 屏蔽软 404，或改用响应关键字过滤。</li>
+<li><b>被 WAF/频率限制</b>：加 <code>--random-agent</code>、降低线程与请求速率、轮换 <code>X-Forwarded-For</code>。</li>
+<li><b>目录返回 403</b>：试 <code>/.git/</code>、<code>/backup/../backup/</code>、大小写变形、<code>%2e</code> 编码路径、<code>index.php?/</code> 路径参数绕过。</li>
+<li><b>路径猜不到</b>：从 robots.txt、JS 中的接口地址、sitemap、错误页、备份域名与历史快照找线索。</li>
+<li><b>禁止目录浏览</b>：目录本身 403 但目录下文件仍可直接访问，直接猜 <code>db_backup.sql</code>、<code>www.zip</code> 等文件名。</li>
+</ul>

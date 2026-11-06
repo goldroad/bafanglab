@@ -1,0 +1,14 @@
+<h4>漏洞描述</h4>
+<p>存储型 XSS 指恶意输入被保存到数据库（留言、昵称、评论、个人资料），任何浏览该页面的用户都会触发执行。相比反射型，它不需要诱导点击链接，危害更大，常见于论坛、客服系统、后台工单。</p>
+<h4>漏洞危害</h4>
+<p>存储型 XSS 危害远超反射型：payload 落库后无需诱导点击，每个访问页面的用户都会自动中招，可形成蠕虫式传播（Samy 蠕虫 20 小时感染百万用户）。攻击者可批量窃取全站用户会话、劫持管理员后植入后门、篡改页面挂马引流，一次注入即演变为全站性安全事件。</p>
+<h4>挖掘技巧与经验</h4>
+<ul>
+<li>所有"会被其他人看到"的输入点都要测：留言、昵称、头像名、个人签名、Excel/CSV 导入内容。</li>
+<li>存储型 XSS 常见于后台管理系统，属于"打后台"利器：可以先留一条 payload，等管理员查看时触发。</li>
+<li>若前端过滤了尖括号，尝试绕过：大小写、双写、HTML 实体、<code>&lt;img src=x onerror&gt;</code>、<code>&lt;details open ontoggle&gt;</code>。</li>
+<li>测试时先提交唯一标记（如 <code>xvtest123</code>），确认数据落库且被原样回显，再换 payload。</li>
+<li>打 cookie 需要目标站未设置 HttpOnly；实战中更常见的是打点后进行内网横向（配合 CSRF）。</li>
+</ul>
+<h4>更多练习场景</h4>
+<p>如果需要练习更多场景，请安装 xss-labs 靶场：<a href="https://github.com/do0dl3/xss-labs" target="_blank" rel="noopener noreferrer">https://github.com/do0dl3/xss-labs</a></p>

@@ -1,0 +1,7 @@
+<h4>修复方法</h4>
+<ul>
+<li>不要对用户可控数据使用 <code>unserialize()</code>，改用 <code>json_decode()</code> 等安全格式。</li>
+<li>必须反序列化时使用 <code>unserialize($data, ['allowed_classes' => false])</code> 或严格类白名单。</li>
+<li>对数据做完整性校验（HMAC 签名），防止 cookie/隐藏字段被篡改。</li>
+<li>业务类中避免在魔术方法里执行文件、命令、数据库等危险操作。</li>
+</ul>

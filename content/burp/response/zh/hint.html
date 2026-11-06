@@ -1,0 +1,18 @@
+<div class="hint-thought">
+<h4>思路提示</h4>
+<p>本关练习的是<b>修改响应</b>，而不是请求。接口返回的纯文本里带了一个布尔字段控制 VIP 权限。在 Burp 中开启「响应拦截」，拦到接口响应后，把那个布尔值从假改成真再放行，前端就会认为你是 VIP。关键是理解：前端展示逻辑完全依赖服务端返回的字段。</p>
+</div>
+<details class="hint-detail">
+<summary>详细解题过程（点击展开）</summary>
+<div>
+<b>操作步骤：</b><br>
+1. 浏览器代理指向 <code>127.0.0.1:8080</code>，Burp &rarr; Proxy &rarr; Intercept is on；<br>
+2. 进入本页，先放行页面自身的 HTML 响应（直接 Forward）；<br>
+3. 点击「加载 VIP 区域」按钮；<br>
+4. Burp 拦截到 <code>GET /bafanglab/modules/burp/api/ex3.php</code>，右键选择
+   <b>Do intercept &rarr; Response to this request</b>，点 Forward；<br>
+5. 拦到纯文本响应后，把 <code>vip=false</code> 改成 <code>vip=true</code>，点 Forward；<br>
+6. 页面 VIP 区域即显示隐藏的通关凭证。<br>
+<b>接口地址：</b><code>modules/burp/api/ex3.php</code>
+</div>
+</details>

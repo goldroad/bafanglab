@@ -1,0 +1,8 @@
+<h4>绕过技巧</h4>
+<ul>
+<li><b>sleep 被关键字过滤</b>：改用 <code>benchmark(1000000,md5('x'))</code>、<code>heavy query</code>（大表 count）、<code>get_lock()</code> 延迟。</li>
+<li><b>只过滤 and/or</b>：<code>&amp;&amp;</code>、<code>||</code>、<code>%26%26</code>、大小写混写、双写 <code>oorr</code>。</li>
+<li><b>空格被过滤</b>：<code>/**/</code>、<code>%0a</code>、<code>%09</code>、括号包裹。</li>
+<li><b>单引号被过滤</b>：数字型注入、双引号闭合、<code>char(39)</code>。</li>
+<li><b>sleep 在子查询里不生效</b>：把延迟放到主查询的条件分支 <code>if(...,sleep(3),0)</code>，或用 <code>union select sleep(3)</code>。</li>
+</ul>

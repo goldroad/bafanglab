@@ -1,0 +1,23 @@
+<table class="case-table">
+<thead>
+<tr><th>位置</th><th>影响</th></tr>
+</thead>
+<tbody>
+<tr>
+<td>FlyBear/Image/upload_zlb.php name 参数路径穿越</td>
+<td>写 PHP WebShell 至 Web 根 <code>D:\fu**en2.0\Web\OfficalWeb\</code>，实测 system() 执行任意命令（Windows Server 2008 R2，阿里云主机）</td>
+</tr>
+<tr>
+<td><code>/wp-content/plugins/index.php?name=&content=</code>（hex 解码 file_put_contents，<code>..%2f</code> 绕 WAF）</td>
+<td>任意文件写→webshell RCE；另发现三处已植入后门（eval_x.php、puakyb.php 任意代码执行/文件读写）；已读 wp-config.php 获取 DB 凭据与 salts 并伪造 admin cookie</td>
+</tr>
+<tr>
+<td>fastjson 1.2.46 + 1.2.47 Class 缓存绕过</td>
+<td>JdbcRowSetImpl JNDI 注入，dnslog 回连证实外连可控（见反序列化节）</td>
+</tr>
+<tr>
+<td>Deepthroat CMS 模板编辑器 saveFileCode（admin:admin 后台）</td>
+<td>注入 PHP WebShell，以 www(uid=1000) 执行命令；读取 <code>/home/www/.ssh/id_rsa</code>、3 套数据库凭据，服务器 46+ 站点</td>
+</tr>
+</tbody>
+</table>

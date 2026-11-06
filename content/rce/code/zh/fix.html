@@ -1,0 +1,7 @@
+<h4>修复方法</h4>
+<ul>
+<li>严禁 <code>eval</code> 执行用户输入；需要表达式求值时使用安全的表达式解析库或白名单 DSL。</li>
+<li>不使用 <code>assert()</code> 执行字符串、不使用 <code>create_function</code>、反序列化前做类型白名单。</li>
+<li>禁用危险函数：<code>disable_functions</code> 中列出 <code>system</code>、<code>exec</code>、<code>shell_exec</code>、<code>passthru</code>、<code>proc_open</code>、<code>popen</code>。</li>
+<li>代码与数据严格分离，Web 目录不可写，降低被写入 WebShell 的可行性。</li>
+</ul>

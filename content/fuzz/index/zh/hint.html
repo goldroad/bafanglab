@@ -1,0 +1,15 @@
+<div class="hint-thought">
+<h4>思路提示</h4>
+<p>参数 Fuzz 的核心是<b>对参数名进行爆破</b>，而不是参数值。本关除了可见的 <code>?id=1</code>，还藏了 3 个未公开的参数。思路：抓请求后把参数名（如 <code>id</code>）设为 payload 位置，挂上参数字典批量跑，看哪个参数名能触发不同的响应（响应长度变化）。常见隐藏参数名有 debug、admin、source、test、dev 等。</p>
+</div>
+<details class="hint-detail">
+<summary>详细解题过程（点击展开）</summary>
+<div>
+<b>Burp 玩法：</b>抓 <code>?id=1</code> 请求 &rarr; Send to Intruder &rarr; 把参数名 id 设为 payload 位置 &rarr; 加载参数字典（debug,admin,source,test,dev...）&rarr; Start attack，看响应长度差异。<br>
+<b>ffuf 玩法：</b><br><code>ffuf -u "{{SITE}}/modules/fuzz/index.php?FUZZ=1" -w dict_params.txt</code><br>
+<b>现成字典：</b>本页上方可下载 <code>dict_params.txt</code>，内含本关全部隐藏参数名。<br>
+<b>隐藏参数值：</b>debug 参数值为 <code>1</code>，admin 参数值为 <code>true</code>，source 参数值为 <code>1</code>。<br>
+<b>响应反馈对照：</b>未带任何已知参数 →「请输入查询条件」；参数名对但值不对（如 <code>?debug=3</code>、<code>?admin=false</code>）→「找不到对应的数据」；参数名与值都正确 → 返回对应内容。<br>
+<b>叠加验证：</b><code>?id=1&amp;debug=1</code> 会同时返回公开参数提示与 debug 调试信息。
+</div>
+</details>

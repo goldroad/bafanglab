@@ -1,0 +1,52 @@
+# bafanglab .gitignore
+# 上传目录内容不入库（保留目录）
+uploads/*
+!uploads/.gitkeep
+
+# 系统文件
+Thumbs.db
+desktop.ini
+.DS_Store
+
+# 编辑器
+.idea/
+.vscode/
+*.bak
+# 目录扫描关卡的编辑器残留泄露练习靶（单独放行，必须入库）
+!config.php.bak
+*.swp
+
+# 运行期生成
+access_log.txt
+modules/unserialize/access_log.txt
+*.log
+test_result_*.txt
+
+# Docker 数据卷与分发产物（与 .dockerignore 对齐）
+data/
+*.tar.gz
+MD5SUMS
+
+# 目录扫描靶场诱饵目录（install.php 生成，空目录不入库，克隆后重跑 install.php 即可恢复）
+phpmyadmin_bak/
+.git_hidden/
+
+# 测试/截图工具运行期生成的临时目录
+.screenshots/
+
+# 目录扫描练习 - 示例 .git 泄露仓库（由 install.php 生成，避免嵌套仓库冲突）
+backup/.git/
+
+# SSTI 关卡（模块16）的通关凭证文件，由 install.php 生成
+modules/ssti/secret.txt
+
+# SQL 注入文件读写关卡（模块7f）运行期写入文件，目录保留、内容不入库
+modules/sqli/files/*
+!modules/sqli/files/.gitkeep
+
+# Python
+__pycache__/
+*.pyc
+
+# 开发过程文件
+dev.log

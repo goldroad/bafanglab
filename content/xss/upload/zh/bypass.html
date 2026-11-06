@@ -1,0 +1,11 @@
+<h4>常见防御与绕过思路</h4>
+<ul>
+<li><b>只查扩展名黑名单（php/php5）</b>：改成 <code>.html</code>、<code>.svg</code> 就能过，本关就是这种情况。</li>
+<li><b>扩展名大小写过滤不严</b>：<code>.HTML</code>、<code>.SvG</code>、<code>.pHtml</code> 试一遍。</li>
+<li><b>只查 Content-Type</b>：上传时把 <code>Content-Type: image/png</code> 写进 multipart 头，服务器若只看这个字段就被骗过。</li>
+<li><b>只查文件头（magic bytes）</b>：做"图片 + HTML"多语义文件（polyglot），例如 GIF89a 头 + HTML 脚本；或 SVG 前面塞注释再放 <code>&lt;script&gt;</code>。</li>
+<li><b>SVG 被过滤了 script 标签</b>：换事件属性 <code>onload</code>、<code>onerror</code>，或用 <code>&lt;animate onbegin&gt;</code>、<code>&lt;foreignObject&gt;</code> 夹带 HTML。</li>
+<li><b>只允许 .svg 但禁止脚本</b>：SVG 里通过 <code>&lt;use href="external.svg#id"&gt;</code> 或引用外部脚本，需要注意浏览器的同源与 CSP 限制。</li>
+<li><b>上传后有图片二次处理</b>：若只是压缩尺寸而不重编码，元数据（EXIF/XMP）里也能藏 payload，配合解析漏洞使用。</li>
+<li><b>上传目录带随机名</b>：结合目录扫描、链接回显、Referer 日志泄露来找回真实路径。</li>
+</ul>

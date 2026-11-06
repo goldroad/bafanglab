@@ -1,0 +1,11 @@
+<h4>拦截响应的基础</h4>
+<p>Burp 默认只拦截浏览器发出的 HTTP 请求消息，不拦截服务器返回的 HTTP 响应消息。如果需要拦截某个请求的响应，必须在该请求消息上右键 —— <b>Do intercept &rarr; Response to this request</b>（拦截 —— 该请求的响应），之后才能在右侧 Response 页签看到并修改响应内容。</p>
+<h4>漏洞描述</h4>
+<p>前端鉴权（响应篡改）：服务端把"是否有权限"的开关（如 <code>vip=false</code>）直接下发给前端判断，而敏感内容已预置在客户端（哪怕做了编码隐藏）。攻击者修改响应中的开关即可绕过，前端永远不是安全边界。</p>
+<h4>挖掘技巧与经验</h4>
+<ul>
+<li>拦截请求时右键选择 "Do intercept &rarr; Response to this request"，即可拦截对应响应。</li>
+<li>观察响应中的布尔开关、等级、余额、价格，把 <code>false</code>/<code>0</code>/<code>guest</code> 改成 <code>true</code>/<code>1</code>/<code>vip</code>。</li>
+<li>改响应无变化时，查看页面源码/JS 文件，敏感内容常以明文或 base64 等编码形式预置在前端。</li>
+<li>前端校验只能防误操作，base64 只是编码不是加密，都不能作为安全边界。</li>
+</ul>

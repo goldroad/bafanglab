@@ -1,0 +1,75 @@
+<table class="case-table">
+<thead>
+<tr><th>发现的敏感路径/文件/接口</th><th>影响</th></tr>
+</thead>
+<tbody>
+<tr>
+<td><code>https://www.*.com.cn:9002/actuator/env</code> 及 <code>/actuator/heapdump</code></td>
+<td>Actuator 环境变量泄露：MySQL 连接串（<code>jdbc:mysql://101.*.*.79:3306/****service</code>）、MongoDB 连接串、企业微信 CorpID/AgentID、内部 IP 4 个、服务器路径；heapdump 提取内存凭据（数据库口令、WHR.TXL_SECRET/sToken 等）</td>
+</tr>
+<tr>
+<td>OSS Bucket 敏感目录：<code>credentials/</code>、<code>nda/</code>、<code>AliyunSLBHealthCheckLogs/</code>、<code>onlineorder/</code>、<code>algorithm_activation/</code> 等 10 个目录</td>
+<td>客户营业执照/证件扫描件（数百个 jpg/pdf/rar，已下载验证）、保密协议、含内网 IP 的 SLB 日志、订单、算法激活码全量可未授权列举下载</td>
+</tr>
+<tr>
+<td><code>*base.blob.core.*.cn/webapps</code>（Azure Blob 公开列举，5000+ 文件）</td>
+<td>爬虫/语音评分源码（.py）、1118 个 yaml 配置、.bak 备份、24 名内部测试人员手机号、内部 Azure 地址/内网 IP/K8s 部署信息、微信 AppKey 与 URL 白名单泄露</td>
+</tr>
+<tr>
+<td>① <code>service.*.com/.../actuator/health</code>（<code>..;/</code> 路径遍历绕过认证）+ Knife4j <code>doc.html</code>/<code>swagger-resources</code> 未授权 ② <code>api.*.com</code>「API测试工具」页面预置硬编码 appKey/user ③ <code>120.*.*.147:8511</code> IIS 目录浏览（web.config、/sqlscripts/new_proj_db.sql 等）</td>
+<td>内部测试网关凭据、核心业务 API 契约（登录/SSO/发票/报销）、后端目录结构全暴露，16 个 WCF 服务支持匿名 SOAP 调用</td>
+</tr>
+<tr>
+<td><code>/ai-api/v3/api-docs</code> 未授权 Swagger（若依架构，OpenAPI 3.1，67KB）</td>
+<td>全部 146 个 API 端点的路径、参数、认证方式暴露，完整攻击面地图</td>
+</tr>
+<tr>
+<td><code>47.*.*.151/.git/</code> 完整暴露（HEAD/config/index 692 文件/logs，pack 包 981MB 可下载）；<code>www.*.com/index.php?start_debug=1</code> 泄露 Zend Debugger 状态</td>
+<td>CRM 商城前端源码、提交历史、开发者信息面临全量还原；debug_host 回显可控</td>
+</tr>
+<tr>
+<td><code>/wmsApi/actuator</code> 与 <code>/api/actuator</code> 全端点未授权（env、heapdump 57MB）；<code>/api/druid/</code> 监控台</td>
+<td>heapdump 提取 MySQL root 明文口令与 JWT 密钥→生产 MySQL 外网接管：9 账号哈希+盐、4.2 万行 WMS 数据；Druid 泄露 321 条会话与数据源配置</td>
+</tr>
+<tr>
+<td><code>/api/upload/video</code> 未鉴权上传入口（<code>/upload/video/cmd.aspx</code>），经 WebShell 读取 web.config</td>
+<td>泄露 MySQL root/root 连接串与服务器物理路径 <code>C:\YZD_wangzhan\</code>；本地配置另泄露 MSSQL sa 口令、FTP 凭据（RCE 链见第十节）</td>
+</tr>
+<tr>
+<td><code>/.git/</code> 完全暴露，git-dumper 还原 88 文件源码；<code>.git/config</code> 内嵌阿里云 Codeup OAuth2 令牌；<code>/deploy/nginx/lmyiot-growth.conf</code>、<code>/deploy/README.md</code>（服务器 IP、证书路径、发布流程）</td>
+<td>全站源码 + 云仓库访问令牌 + 运维部署配置泄露</td>
+</tr>
+<tr>
+<td><code>/.git/</code> 经 Tengine CDN 公开可读（HEAD/config/logs，index 438 文件，内部仓库 <code>git.*.com/official-website/fe.git</code>）</td>
+<td>23 个 HTML 页面源码、分支策略、提交者邮箱泄露</td>
+</tr>
+<tr>
+<td>Nexus 仓库匿名可读制品 <code>CommonSetting.ini</code>（硬编码 MySQL/Redis 凭据）；<code>vpn/local.*-data.com/static/config.js</code>（内网地址+3167 个 API 端点）；<code>/apis/config/token/get</code> 匿名取 token</td>
+<td>凭据复用致公网 MySQL root/siger 双账户接管，520 张表全泄；8858 端口匿名拉取 37,878 条操作日志（20+ 员工真实姓名）</td>
+</tr>
+<tr>
+<td><code>/.git/</code> 暴露（index 1862 文件、内网 git 地址）；据 index 文件名未授权下载 <code>/data/1becea5aa23c4dc0df7dc46c16c14c9d.db</code>（SQLite 503KB，30 张表）</td>
+<td>管理员 admin 双重 MD5=123456、42 项站点配置、全站 PHP 源码泄露；error.html 被植入恶意 JS</td>
+</tr>
+<tr>
+<td>Deepthroat CMS 默认凭证 admin:admin 登录后，备份接口 <code>?m=system&s=bakup&a=download</code> 下载完整 SQL 备份（157KB）</td>
+<td>管理员口令哈希、订单、留言、招聘、产品数据全泄；同站 saveFileCode 可写 WebShell</td>
+</tr>
+<tr>
+<td>ClickHouse HTTP 接口完全未授权，可直接执行 SQL</td>
+<td>147,444 用户账户、161,388 身份记录、650,093 登录日志、14,256,618 条虚拟币交易、135,547 团队记录可批量导出</td>
+</tr>
+<tr>
+<td><code>/data/sqldata_nzy68AK1bDboGFz5d8fg/20220524-103649-1-v1.5.8.sql</code> 未授权下载（EyouCMS 备份，131 表 6587 行）；<code>/.git/</code> 暴露（index 4262 文件，指向 codeup.aliyun.com）；ThinkPHP debug 500 页泄露绝对路径</td>
+<td>管理员 admin bcrypt 哈希离线破解、全库数据与源码结构泄露</td>
+</tr>
+<tr>
+<td><code>api-s.*.cn/api/WXverify/Post</code> 无鉴权返回微信 AppId+AppSecret；<code>api.*.cn/api/weixin/panel/sendSMS</code> 未授权短信接口；<code>/api/manager/enterprise/*</code> JWT 校验失效</td>
+<td>微信小程序密钥可伪造签名，短信资源滥用，配合越权 openID 端到端接管账号（实测读取受害者 14,712 份私有问卷及答卷 PII）</td>
+</tr>
+<tr>
+<td><code>221.229.*.*:6066/actuator/heapdump</code>（Spring Boot Actuator 未授权）</td>
+<td>heapdump 提取生产 MySQL 口令→root@% 登录，sys_user bcrypt 破解出 admin/123456、lionli/admin123，全业务库可读写</td>
+</tr>
+</tbody>
+</table>

