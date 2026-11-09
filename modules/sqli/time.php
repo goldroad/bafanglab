@@ -65,18 +65,6 @@ FIX);
     <?php endif; ?>
 </div>
 
-<?php
-// 双语文案统一从 content/<slug>/<variant>/<lang>/<piece>.html 加载
-// site_tokens + 语言回退 + JSON 编码 全部由 level_content_js 自动处理
-?>
-<script>
-<?php level_content_js('sqli', 'time', 'basic', 'basic'); ?>
-<?php level_content_js('sqli', 'time', 'fix', 'fix'); ?>
-<?php level_content_js('sqli', 'time', 'bypass', 'bypass'); ?>
-<?php level_content_js('sqli', 'time', 'hint', 'hint'); ?>
-<?php level_content_js('sqli', 'time', 'tools', 'tools'); ?>
-</script>
-
 <?php level_nav_current(); ?>
 
 <?php require_once dirname(dirname(__DIR__)) . '/includes/footer.php'; ?>

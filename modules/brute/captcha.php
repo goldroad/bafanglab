@@ -117,18 +117,6 @@ FIX);
     </form>
 </div>
 
-<?php
-// 双语文案统一从 content/<slug>/<variant>/<lang>/<piece>.html 加载
-// site_tokens + 语言回退 + JSON 编码 全部由 level_content_js 自动处理
-?>
-<script>
-<?php level_content_js('brute', 'captcha', 'basic', 'basic'); ?>
-<?php level_content_js('brute', 'captcha', 'fix', 'fix'); ?>
-<?php level_content_js('brute', 'captcha', 'bypass', 'bypass'); ?>
-<?php level_content_js('brute', 'captcha', 'hint', 'hint'); ?>
-<?php level_content_js('brute', 'captcha', 'tools', 'tools'); ?>
-</script>
-
 <?php level_nav_current(); ?>
 
 <?php require_once dirname(dirname(__DIR__)) . '/includes/footer.php'; ?>

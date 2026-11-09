@@ -111,47 +111,18 @@ function showBasic(html) { openModal(L('modalBasic', '基础知识'), html, 'mod
 // 打开推荐工具
 function showTools(html) { openModal(L('modalTools', '推荐工具'), html, 'modal-tools'); }
 
-// 打开漏洞源码（取 level_code() 输出的隐藏内容）
+// 打开漏洞源码（异步从 piece.php 获取，页面响应不再内嵌源码面板）
 function showSrc() {
-    var el = document.getElementById('lvlSrc');
-    if (el) { openModal(L('modalSrc', '漏洞源码'), el.innerHTML, 'modal-src'); }
+    lvlFetchPiece('src', function (html) {
+        openModal(L('modalSrc', '漏洞源码'), html, 'modal-src');
+    });
 }
 
-// 取关卡的修复方法/绕过技巧内容（兼容 fix/fix2/bypass/bypass2 多种变量名）
-function _contentOf(names) {
-    for (var i = 0; i < names.length; i++) {
-        var v = window[names[i]];
-        if (typeof v === 'string' && v.trim()) return v.trim();
-    }
-    return '';
-}
-
-// 组合「修复方法 + 修复示例代码 + 绕过技巧」HTML（弹窗与页内直显共用）
-function fixCombinedHtml() {
-    var html = '';
-
-    // 1. 独立变量：fix / bypass（basic2 关卡对应 fix2 / bypass2）
-    var fixMethod = _contentOf(['fix', 'fix2']);
-    var bypass    = _contentOf(['bypass', 'bypass2']);
-
-    // 2. 从 #lvlFix 获取修复示例代码
-    var fixEl = document.getElementById('lvlFix');
-    var fixCodeBlock = '';
-    if (fixEl && fixEl.innerHTML.trim()) {
-        fixCodeBlock = '<h4>修复示例代码</h4>' + fixEl.innerHTML;
-    }
-
-    // 3. 按顺序组合：修复方法 → 修复示例代码 → 绕过技巧
-    if (fixMethod)    html += fixMethod;
-    if (fixCodeBlock) html += fixCodeBlock;
-    if (bypass)       html += bypass;
-
-    return html;
-}
-
-// 打开修复方法（整合：修复方法 + 修复示例代码 + 绕过技巧）
+// 打开修复方法（整合：修复方法 + 修复示例代码 + 绕过技巧，异步从 piece.php 获取）
 function showFix() {
-    openModal(L('modalFix', '修复方法'), fixCombinedHtml(), 'modal-src');
+    lvlFetchPiece('fix', function (html) {
+        openModal(L('modalFix', '修复方法'), html, 'modal-src');
+    });
 }
 
 // 关闭弹窗
@@ -193,29 +164,47 @@ function lvlInlineSetup() {
     }
 }
 
-// 取某个直显视图的内容 HTML
-function lvlInlineContent(view, btn) {
-    var empty = '<p class="lvl-empty">' + L('lvlEmpty', '暂无内容') + '</p>';
-    if (view === 'basic' || view === 'hint' || view === 'tools') {
-        var v = window[btn.getAttribute('data-var')];
-        return (typeof v === 'string' && v.trim()) ? v : empty;
-    }
-    if (view === 'src') {
-        var src = document.getElementById('lvlSrc');
-        return (src && src.innerHTML.trim()) ? src.innerHTML : empty;
-    }
-    if (view === 'fix') {
-        var fix = fixCombinedHtml();
-        return fix.trim() ? fix : empty;
-    }
-    if (view === 'case') {
-        var cs = document.getElementById('lvlCase');
-        return (cs && cs.innerHTML.trim()) ? cs.innerHTML : empty;
-    }
-    return '';
+/* ---------------- 学习辅助内容按需加载 ---------------- */
+/* 页面响应瘦身：基础/提示/工具/源码/修复/案例内容不再随页面输出，
+   点击按钮时从 piece.php 异步获取，首取后缓存在内存中，再次点击零请求。 */
+
+var LVL_PIECE_CACHE = {};
+
+// 从当前 URL 推导模块 slug 与关卡 variant（/modules/<slug>/<variant>.php）
+function lvlSlugVariant() {
+    var path = window.location.pathname.replace(/\/+$/, '');
+    var marker = '/modules/';
+    var idx = path.indexOf(marker);
+    if (idx === -1) { return null; }
+    var rest = path.substring(idx + marker.length).split('/');
+    if (rest.length !== 2) { return null; }
+    return { slug: rest[0], variant: rest[1].replace(/\.php$/, '') };
 }
 
-// 按钮点击：切换直显视图（事件委托）
+// 异步获取学习辅助内容片段；失败或无内容返回「暂无内容」占位
+function lvlFetchPiece(piece, cb) {
+    var empty = '<p class="lvl-empty">' + L('lvlEmpty', '暂无内容') + '</p>';
+    if (LVL_PIECE_CACHE[piece]) { cb(LVL_PIECE_CACHE[piece]); return; }
+    var sv = lvlSlugVariant();
+    if (!sv) { cb(empty); return; }
+    var base = window.location.pathname.split('/modules/')[0];
+    var url = base + '/piece.php'
+        + '?slug=' + encodeURIComponent(sv.slug)
+        + '&variant=' + encodeURIComponent(sv.variant)
+        + '&piece=' + encodeURIComponent(piece);
+    var xhr = new XMLHttpRequest();
+    xhr.open('GET', url, true);
+    xhr.onreadystatechange = function () {
+        if (xhr.readyState !== 4) { return; }
+        var html = (xhr.status === 200 && xhr.responseText && xhr.responseText.trim())
+            ? xhr.responseText : empty;
+        LVL_PIECE_CACHE[piece] = html;
+        cb(html);
+    };
+    xhr.send();
+}
+
+// 按钮点击：切换直显视图（事件委托），辅助内容按需拉取
 document.addEventListener('click', function (e) {
     var btn = e.target.closest ? e.target.closest('.action-bar[data-lvl-inline] [data-lvl-view]') : null;
     if (!btn) { return; }
@@ -252,13 +241,19 @@ document.addEventListener('click', function (e) {
     head.appendChild(title);
     var body = document.createElement('div');
     body.className = 'hint-body';
-    body.innerHTML = lvlInlineContent(view, btn);
-    enhanceCodeCopy(body);
+    body.innerHTML = '<p class="lvl-empty">' + L('lvlLoading', '加载中…') + '</p>';
     aux.appendChild(head);
     aux.appendChild(body);
 
     practice.style.display = 'none';
     aux.style.display = 'block';
+
+    // 按需拉取内容：先展示「加载中」，返回后填充（若期间用户已切换视图则丢弃）
+    lvlFetchPiece(view, function (html) {
+        if (!btn.classList.contains('active')) { return; }
+        body.innerHTML = html;
+        enhanceCodeCopy(body);
+    });
 });
 
 /* ---------------- Burp 练习：纯文本接口响应解析与填充 ---------------- */

@@ -62,17 +62,6 @@ FIX);
 
 </div>
 
-<?php
-// 双语文案统一从 content/<slug>/<variant>/<lang>/<piece>.html 加载
-// site_tokens + 语言回退 + JSON 编码 全部由 level_content_js 自动处理
-?>
-<script>
-<?php level_content_js('jsleak', 'unauth', 'basic', 'basic2'); ?>
-<?php level_content_js('jsleak', 'unauth', 'fix', 'fix2'); ?>
-<?php level_content_js('jsleak', 'unauth', 'bypass', 'bypass2'); ?>
-<?php level_content_js('jsleak', 'unauth', 'hint', 'hint2'); ?>
-</script>
-
 <?php level_nav_current(); ?>
 
 <?php require_once dirname(dirname(__DIR__)) . '/includes/footer.php'; ?>

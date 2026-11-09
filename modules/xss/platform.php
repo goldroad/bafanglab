@@ -233,14 +233,6 @@ new Image().src = 'https://webhook.site/你的唯一地址'
     </div>
 </div>
 
-<script>
-<?php level_content_js('xss', 'platform', 'basic', 'basic'); ?>
-<?php level_content_js('xss', 'platform', 'fix', 'fix'); ?>
-<?php level_content_js('xss', 'platform', 'bypass', 'bypass'); ?>
-<?php level_content_js('xss', 'platform', 'hint', 'hint'); ?>
-<?php level_content_js('xss', 'platform', 'tools', 'tools'); ?>
-</script>
-
 <?php level_nav_current(); ?>
 
 <?php require_once dirname(dirname(__DIR__)) . '/includes/footer.php'; ?>

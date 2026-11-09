@@ -159,16 +159,6 @@ FIX);
     </div>
 </div>
 
-<?php
-// 双语文案统一从 content/<slug>/<variant>/<lang>/<piece>.html 加载
-?>
-<script>
-<?php level_content_js('xss', 'upload', 'basic', 'basic'); ?>
-<?php level_content_js('xss', 'upload', 'fix', 'fix'); ?>
-<?php level_content_js('xss', 'upload', 'bypass', 'bypass'); ?>
-<?php level_content_js('xss', 'upload', 'hint', 'hint'); ?>
-</script>
-
 <?php level_nav_current(); ?>
 
 <?php require_once dirname(dirname(__DIR__)) . '/includes/footer.php'; ?>
