@@ -1,0 +1,31 @@
+<table class="case-table">
+<thead>
+<tr><th>位置</th><th>影响</th></tr>
+</thead>
+<tbody>
+<tr>
+<td><code>User-Agent</code> 请求头（访问日志入库）</td>
+<td>某 CMS 把访客 UA 写入访问日志表，UA 直接拼接 INSERT 语句，报错注入成功拖出管理员账号与密码哈希，配合后台 Getshell</td>
+</tr>
+<tr>
+<td><code>X-Forwarded-For</code> 请求头（审计日志）</td>
+<td>某 OA 系统把 <code>X-Forwarded-For</code> 作为客户端 IP 写入审计日志，未过滤，报错注入读取全库用户手机号与身份证号</td>
+</tr>
+<tr>
+<td><code>Referer</code> 请求头（流量统计）</td>
+<td>某电商平台统计页面来源时把 Referer 入库，<code>Referer</code> 中注入 <code>updatexml</code> 报错，拖出订单表与用户收货地址</td>
+</tr>
+<tr>
+<td><code>Cookie</code> 中的 sessionid 字段</td>
+<td>某论坛把 sessionid 直接拼进"在线用户"查询，单引号闭合 + 联合查询注入，读取用户表密码哈希</td>
+</tr>
+<tr>
+<td><code>X-Real-IP</code> 请求头（防刷日志）</td>
+<td>某活动页记录防刷日志时把 <code>X-Real-IP</code> 入库，伪造该头注入 <code>sleep(5)</code> 时间盲注，逐字符提取数据库结构</td>
+</tr>
+<tr>
+<td><code>Accept-Language</code> 请求头（多语言日志）</td>
+<td>某多语言站点记录用户语言偏好入库，<code>Accept-Language</code> 中注入 <code>extractvalue</code> 报错，读取后台管理员凭据</td>
+</tr>
+</tbody>
+</table>

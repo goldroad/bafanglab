@@ -1,0 +1,10 @@
+<h4>绕过技巧</h4>
+<ul>
+<li><b>WAF 不检查请求头</b>：很多 WAF 只检测 URL 和 Body，对 <code>User-Agent</code> / <code>X-Forwarded-For</code> 完全放行，直接把 payload 放请求头里即可绕过。</li>
+<li><b>过滤单引号</b>：改用双引号闭合（若 SQL 用双引号包裹值），或用 <code>char(39)</code>、<code>0x27</code> 生成引号。</li>
+<li><b>过滤 and/or</b>：用 <code>&amp;&amp;</code>、<code>||</code>、大小写 <code>AaNdD</code>、双写 <code>oorr</code>、内联注释 <code>/*!50000or*/</code>。</li>
+<li><b>过滤空格</b>：用 <code>/**/</code>、<code>%09</code>（Tab）、括号 <code>()</code> 代替；请求头里换行 <code>\r\n</code> 会导致请求异常，尽量不用。</li>
+<li><b>过滤注释符</b>：用 <code>or '1'='1</code> 让条件恒真，或用闭合引号后直接堆叠语句。</li>
+<li><b>UA 长度限制</b>：部分服务器限制 UA 长度（如 8KB），超长 payload 会被截断，可用分段读取或缩短函数名。</li>
+<li><b>X-Forwarded-For 伪造</b>：若系统从 <code>X-Forwarded-For</code> 取客户端 IP 入库，直接伪造该头注入，比 UA 更隐蔽。</li>
+</ul>

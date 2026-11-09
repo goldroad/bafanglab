@@ -1,0 +1,10 @@
+<h4>绕过技巧</h4>
+<ul>
+<li><b>WAF 不解析 JSON body</b>：直接把 payload 放在 JSON 字符串值里，很多基于关键字的 WAF 完全看不到，是最常见的绕过方式。</li>
+<li><b>过滤单引号</b>：改用双引号闭合（JSON 字符串本身用双引号包裹，SQL 里的值用单引号；若服务端把双引号也拼进 SQL，则用 <code>\"</code> 闭合），或用 <code>char(39)</code>、<code>0x27</code> 生成引号。</li>
+<li><b>过滤 and/or</b>：用 <code>&amp;&amp;</code>、<code>||</code>、大小写 <code>AaNdD</code>、双写 <code>oorr</code>、内联注释 <code>/*!50000or*/</code>。</li>
+<li><b>过滤空格</b>：用 <code>/**/</code>、<code>%09</code>（Tab）、<code>%0a</code>（换行）、括号 <code>()</code> 代替。</li>
+<li><b>过滤注释符</b>：用 <code>or '1'='1</code> 让条件恒真，或用闭合引号后直接堆叠语句。</li>
+<li><b>JSON 转义干扰</b>：服务端若对 JSON 值做 <code>stripslashes</code>，可利用 <code>\\</code> 转义引号制造注入；若不做转义，直接用单引号闭合即可。</li>
+<li><b>数字型 JSON 字段</b>：不带引号直接拼接，如 <code>{"id":1 and (select updatexml(1,concat(0x7e,database()),1))}</code>。</li>
+</ul>

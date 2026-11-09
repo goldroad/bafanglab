@@ -4,13 +4,13 @@
 
 ## 一、项目简介
 
-bafanglab 是一个基于 **PHP + MySQL + Apache** 的 Web 漏洞教学靶场，包含 16 个经典漏洞模块、31 个子关卡页面（另有 3 个纯教学页），适合 Web 安全入门与 Burp Suite 实操训练。
+bafanglab 是一个基于 **PHP + MySQL + Apache** 的 Web 漏洞教学靶场，包含 16 个经典漏洞模块、33 个子关卡页面（另有 3 个纯教学页），适合 Web 安全入门与 Burp Suite 实操训练。
 
 每个模块均提供「基础知识 / 提示 / 推荐工具 / 漏洞源码 / 修复方法 / 真实案例」学习辅助。
 
 内置**简体中文**界面，并提供独立的**环境自检页** **`check.php`**，一眼看清 PHP 版本、扩展、目录权限、伪静态与数据库状态。
 
-本靶场已在 **Windows（phpStudy）/ Ubuntu / CentOS / Docker** 四种环境下完成全量功能验证（105 项自动化测试全部通过），代码自动适配跨平台差异（如 ping 命令参数、文件路径分隔符、系统文件路径等）。推荐使用 Docker 方式部署，环境一致、开箱即用，见 [DEPLOY.md](DEPLOY.md)。
+本靶场已在 **Windows（phpStudy）/ Ubuntu / CentOS / Docker** 四种环境下完成全量功能验证（109 项自动化测试全部通过），代码自动适配跨平台差异（如 ping 命令参数、文件路径分隔符、系统文件路径等）。推荐使用 Docker 方式部署，环境一致、开箱即用，见 [DEPLOY.md](DEPLOY.md)。
 
 ### 界面预览
 
@@ -57,7 +57,7 @@ bafanglab 是一个基于 **PHP + MySQL + Apache** 的 Web 漏洞教学靶场，
 | 4  | JS 敏感信息泄露  | /modules/jsleak/index.php      | 2   | JS 提取 AK/SK + 未授权访问接口                                                                                       |
 | 5  | 密码暴力猜解     | /modules/brute/index.php       | 2   | 无验证码 + 有验证码（OCR 识别绕过）                                                                                       |
 | 6  | XSS        | /modules/xss/reflect.php       | 5   | 反射型 + 存储型（stored.php）+ DOM 型（dom.php）+ 上传型（upload.php）+ XSS 平台（platform.php）                                |
-| 7  | SQL 注入     | /modules/sqli/get.php          | 6   | GET 数字型 + POST 字符型 + 报错/布尔/时间盲注 + 文件读写（INTO OUTFILE / LOAD\_FILE）                                           |
+| 7  | SQL 注入     | /modules/sqli/get.php          | 8   | GET 数字型 + POST 字符型 + JSON 注入 + 请求头注入 + 报错/布尔/时间盲注 + 文件读写（INTO OUTFILE / LOAD\_FILE）                    |
 | 8  | XXE 外部实体注入 | /modules/xxe/index.php         | 1   | 外部实体读本地文件 + php\://filter 读源码 + 内网探测                                                                        |
 | 9  | 文件上传       | /modules/upload/index.php      | 1   | 后端扩展名黑名单绕过                                                                                                  |
 | 10 | 文件包含       | /modules/fileinc/index.php     | 1   | 本地包含 + php\://filter 读源码                                                                                    |
@@ -110,7 +110,7 @@ bafanglab/
 ├── README.md            项目介绍（本文档）
 ├── DEPLOY.md            部署指南（Docker / phpStudy / Linux / 自动化测试）
 ├── docker/              Docker 相关文件（Dockerfile / entrypoint.sh / mysql 配置 / 性能计时脚本）
-├── test_all.py          自动化测试脚本（105 项检查）
+├── test_all.py          自动化测试脚本（109 项检查）
 └── data/mysql/          数据库数据目录（Docker 部署后自动生成）
 ```
 

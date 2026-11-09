@@ -61,6 +61,8 @@ return array(
     /* ---------- 选项卡 ---------- */
     'tab.sqli_get'      => 'GET 数字型',
     'tab.sqli_post'     => 'POST 字符型',
+    'tab.sqli_json'     => 'JSON 注入',
+    'tab.sqli_header'   => '请求头注入',
     'tab.sqli_error'    => '报错注入',
     'tab.sqli_blind'    => '布尔盲注',
     'tab.sqli_time'     => '时间盲注',
@@ -113,7 +115,7 @@ return array(
 
     'm.sqli.tag'        => 'SQLi',
     'm.sqli.title'      => 'SQL 注入',
-    'm.sqli.desc'       => '包含 GET、POST、报错、布尔盲注、时间盲注、文件读写六个子关，练习手工注入、sqlmap 与 INTO OUTFILE 写文件。',
+    'm.sqli.desc'       => '包含 GET、POST、JSON、请求头、报错、布尔盲注、时间盲注、文件读写八个子关，练习手工注入、sqlmap 与 INTO OUTFILE 写文件。',
 
     'm.xxe.tag'         => 'XXE',
     'm.xxe.title'       => 'XXE 外部实体注入',

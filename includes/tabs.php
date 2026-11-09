@@ -31,6 +31,8 @@ if (!function_exists('lab_tab_groups')) {
             'sqli' => array(
                 'tab.sqli_get'     => BASE_URL . '/modules/sqli/get.php',
                 'tab.sqli_post'    => BASE_URL . '/modules/sqli/post.php',
+                'tab.sqli_json'    => BASE_URL . '/modules/sqli/json.php',
+                'tab.sqli_header'  => BASE_URL . '/modules/sqli/header.php',
                 'tab.sqli_error'   => BASE_URL . '/modules/sqli/error.php',
                 'tab.sqli_blind'   => BASE_URL . '/modules/sqli/blind.php',
                 'tab.sqli_time'    => BASE_URL . '/modules/sqli/time.php',
@@ -73,7 +75,7 @@ if (!function_exists('lab_tab_group')) {
 }
 
 /**
- * SQL 注入模块的 6 个子关选项卡（统一入口，避免各文件重复维护）
+ * SQL 注入模块的 8 个子关选项卡（统一入口，避免各文件重复维护）
  * @param string $active 当前激活选项卡（i18n 键 / 中文标签 / 当前语言标签均可）
  */
 if (!function_exists('sqli_tabs')) {

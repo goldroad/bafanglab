@@ -1,0 +1,31 @@
+<table class="case-table">
+<thead>
+<tr><th>位置</th><th>影响</th></tr>
+</thead>
+<tbody>
+<tr>
+<td>POST <code>/search</code>（JSON）keywords 参数</td>
+<td>云锁 WAF 不检查 JSON body，<code>#</code> 闭合 + EXTRACTVALUE 报错注入，已提取 admin 管理员账号/密码、全库 37 张表结构</td>
+</tr>
+<tr>
+<td>POST <code>/c/subject/page</code> orderByField 参数（JSON）</td>
+<td>ORDER BY 子查询 SLEEP 时间盲注，MySQL，延时与秒数线性对应，sqlmap 复确认，无需 token</td>
+</tr>
+<tr>
+<td>POST <code>/biz-config/un_auth/attribute/listDto</code> conditions[].field（JSON）</td>
+<td>未授权 extractvalue 报错注入，MySQL 8.0.28，可读同实例全部 22 个租户库：act_id_user 772 用户、企业 PII（公司名/手机/邮箱/信用代码）</td>
+</tr>
+<tr>
+<td>POST <code>/api/login</code>（JSON）username 字段</td>
+<td>前后端分离项目，JSON body 未过滤，<code>"admin' or '1'='1"</code> 万能密码绕过登录，进入后台后越权读取全部用户数据</td>
+</tr>
+<tr>
+<td>POST <code>/user/info</code>（JSON）uid 字段</td>
+<td>数字型 JSON 注入，<code>{"uid":1 and sleep(3)}</code> 时间盲注成功，逐字符提取数据库版本与表结构</td>
+</tr>
+<tr>
+<td>POST <code>/order/query</code>（JSON）orderNo 字段</td>
+<td>字符型 JSON 报错注入，updatexml 带出数据库账号 <code>root@localhost</code> 与 <code>secure_file_priv</code> 路径，具备写文件条件</td>
+</tr>
+</tbody>
+</table>

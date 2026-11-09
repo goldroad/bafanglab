@@ -1,0 +1,9 @@
+<h4>修复方法</h4>
+<ul>
+<li>使用参数化查询（PDO / MySQLi prepared statement），JSON 解析出的字段作为绑定参数传入，禁止字符串拼接。</li>
+<li><code>json_decode</code> 后校验 <code>json_last_error()</code>，格式错误直接返回 400，不进入 SQL 逻辑。</li>
+<li>对 JSON 字段做类型与白名单校验，例如 <code>id</code> 强制 <code>intval</code>，<code>username</code> 限制字符集为 <code>a-zA-Z0-9_</code>。</li>
+<li>生产环境关闭错误回显（<code>display_errors=Off</code>），错误只写服务端日志，对外返回统一提示。</li>
+<li>WAF 需开启 JSON body 解析与规则匹配，不能只检查 URL 和表单参数。</li>
+<li>数据库账号最小权限，禁止业务账号拥有 FILE、DROP 等高危权限。</li>
+</ul>

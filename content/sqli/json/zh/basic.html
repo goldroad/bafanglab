@@ -1,0 +1,26 @@
+<h4>漏洞描述</h4>
+<p>JSON 注入指的是注入点位于 JSON 请求体字段中的 SQL 注入。前后端分离项目普遍使用 <code>application/json</code> 提交数据，开发人员往往只对表单参数（<code>$_GET</code> / <code>$_POST</code>）做过滤，却忽略了从 <code>php://input</code> 解析出来的 JSON 字段同样会被拼进 SQL。本关后端执行的语句是 <code>SELECT id, username, role FROM users WHERE username = '$name'</code>，<code>$name</code> 来自 JSON body 的 <code>username</code> 字段，字符型、单引号包裹，且 <code>mysqli_error()</code> 被原样输出。</p>
+
+<h4>漏洞危害</h4>
+<p>JSON 注入与普通 SQL 注入危害完全相同：可拖库、绕登录、读文件、写 Shell。由于 JSON 字段常被误认为"结构化数据更安全"，加上 WAF 对 JSON body 的解析与规则覆盖往往弱于表单参数，JSON 注入更容易被忽视，已成为近年来 API 漏洞的高发类型。</p>
+
+<h4>适用场景与判断方法</h4>
+<ul>
+<li>接口 <code>Content-Type: application/json</code>，请求体形如 <code>{"username":"admin"}</code> &rarr; 优先检查 JSON 字段是否可注入。</li>
+<li>在 JSON 字符串值里加一个单引号 <code>{"username":"admin'"}</code>，若返回 MySQL 语法错误 &rarr; 确认存在报错回显，可走报错注入。</li>
+<li>若 JSON 值是数字型（不带引号），直接在数字后追加 SQL 语句，如 <code>{"id":1 and 1=2}</code>。</li>
+<li>注意 JSON 转义：双引号需要写成 <code>\"</code>，换行写成 <code>\n</code>；单引号在 JSON 字符串内无需转义。</li>
+<li>若服务端用 <code>json_decode</code> 后强类型取字段，payload 中的特殊字符可能被截断，需用报错/盲注绕过。</li>
+</ul>
+
+<h4>挖掘技巧与经验</h4>
+<ul>
+<li>JSON 注入的闭合方式与普通字符型注入一致：单引号闭合 + <code>-- -</code> 注释。</li>
+<li>报错注入首选 <code>updatexml()</code> / <code>extractvalue()</code>，把数据拼进 XPath 报错带出。</li>
+<li>用 <code>0x7e</code>（<code>~</code>）作为数据起始标记，方便在报错文本中定位。</li>
+<li>很多 WAF 不解析 JSON body，直接放行，因此 JSON 注入往往能绕过基于关键字的规则。</li>
+<li>sqlmap 对 JSON 注入支持良好：<code>sqlmap -u URL --data '{"username":"admin"}' -p username --batch</code>。</li>
+</ul>
+
+<h4>本关目标</h4>
+<p>向 JSON body 的 <code>username</code> 字段注入报错函数，读出 <code>secrets</code> 表中的通关凭证。报错信息形如 <code>XPATH syntax error: '~恭喜你完成本关挑战！'</code>。</p>

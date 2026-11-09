@@ -1,0 +1,27 @@
+<h4>漏洞描述</h4>
+<p>请求头注入（HTTP Header SQL Injection）指注入点位于 HTTP 请求头中的 SQL 注入。开发人员通常只对 URL 参数和表单参数做过滤，却忽视了 <code>User-Agent</code>、<code>X-Forwarded-For</code>、<code>Referer</code>、<code>Cookie</code> 等请求头同样是客户端可控的输入。很多系统把这些请求头写入数据库做访问统计、审计日志或访客识别，拼接时未过滤，从而形成注入。本关后端把 <code>User-Agent</code> 请求头直接拼进 <code>SELECT id, username, role FROM users WHERE username = '$ua'</code>，字符型、单引号包裹，且 <code>mysqli_error()</code> 被原样输出。</p>
+
+<h4>漏洞危害</h4>
+<p>请求头注入与普通 SQL 注入危害相同：可拖库、绕登录、读文件、写 Shell。由于请求头往往不经过常规的参数过滤逻辑，且很多 WAF 对请求头的检测力度弱于 URL/Body，请求头注入更容易成为漏网之鱼。尤其是 <code>X-Forwarded-For</code> 这类"看起来是服务端生成"的头，常被误认为可信而直接入库。</p>
+
+<h4>适用场景与判断方法</h4>
+<ul>
+<li>系统记录访问日志、审计日志、访客统计时，通常会把 <code>User-Agent</code>、<code>Referer</code>、<code>X-Forwarded-For</code> 入库 &rarr; 检查这些头是否可注入。</li>
+<li>在 <code>User-Agent</code> 里加一个单引号，若返回 MySQL 语法错误 &rarr; 确认存在报错回显，可走报错注入。</li>
+<li>常见可注入头：<code>User-Agent</code>、<code>Referer</code>、<code>X-Forwarded-For</code>、<code>X-Real-IP</code>、<code>Cookie</code>、<code>X-Originating-IP</code>。</li>
+<li>若页面不回显数据也不报 SQL 错误，可尝试时间盲注（<code>sleep()</code>）判断注入是否存在。</li>
+<li>请求头注入常配合日志查看页面形成"二次注入"：注入 payload 写入日志，再在日志查看页被取出执行。</li>
+</ul>
+
+<h4>挖掘技巧与经验</h4>
+<ul>
+<li>闭合方式与普通字符型注入一致：单引号闭合 + <code>-- -</code> 注释。</li>
+<li>报错注入首选 <code>updatexml()</code> / <code>extractvalue()</code>，把数据拼进 XPath 报错带出。</li>
+<li>用 <code>0x7e</code>（<code>~</code>）作为数据起始标记，方便在报错文本中定位。</li>
+<li>注意请求头长度限制：部分服务器限制 <code>User-Agent</code> 长度（如 8KB），过长 payload 会被截断。</li>
+<li>请求头中的特殊字符（如换行 <code>\r\n</code>）可能导致请求解析异常，注入时尽量避免。</li>
+<li>sqlmap 支持对请求头注入：<code>sqlmap -r request.txt -p User-Agent --batch</code>。</li>
+</ul>
+
+<h4>本关目标</h4>
+<p>修改 <code>User-Agent</code> 请求头，注入报错函数，读出 <code>secrets</code> 表中的通关凭证。报错信息形如 <code>XPATH syntax error: '~恭喜你完成本关挑战！'</code>。</p>

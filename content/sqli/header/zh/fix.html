@@ -1,0 +1,9 @@
+<h4>修复方法</h4>
+<ul>
+<li>使用参数化查询（PDO / MySQLi prepared statement），请求头作为绑定参数传入，禁止字符串拼接。</li>
+<li>对请求头做白名单/长度/字符集校验：<code>User-Agent</code> 限制可打印 ASCII 且长度不超过 256；<code>X-Forwarded-For</code> 只允许 IP 格式。</li>
+<li>不要信任任何客户端可控的请求头，<code>X-Forwarded-For</code> 可被任意伪造，真实客户端 IP 应由代理层通过受信头传递并校验来源。</li>
+<li>生产环境关闭错误回显（<code>display_errors=Off</code>），错误只写服务端日志，对外返回统一提示。</li>
+<li>WAF 需开启请求头检测规则，不能只检查 URL 和 Body。</li>
+<li>数据库账号最小权限，禁止业务账号拥有 FILE、DROP 等高危权限。</li>
+</ul>

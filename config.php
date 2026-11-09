@@ -6,7 +6,7 @@
  */
 
 // 靶场版本号（唯一来源：页面、页尾、首页横幅统一引用此常量，避免多处硬编码）
-define('BAFANGLAB_VERSION', '1.0.0');
+define('BAFANGLAB_VERSION', '1.0.1');
 
 // 数据库配置
 define('DB_HOST', '127.0.0.1');
@@ -86,6 +86,11 @@ function db_server_version()
         $link = @mysqli_connect(DB_HOST, DB_USER, DB_PASS, DB_NAME, (int)DB_PORT);
         if ($link) {
             $v = mysqli_get_server_info($link);
+            // MariaDB 兼容层返回 "5.5.5-10.11.19-MariaDB-..." 形式，剥掉前缀取真实版本号
+            if (is_string($v) && stripos($v, 'MariaDB') !== false
+                && preg_match('/^5\.5\.5-(\d+\.\d+\.\d+)/', $v, $m)) {
+                $v = $m[1];
+            }
             if (is_string($v) && $v !== '') { $ver = $v; }
             mysqli_close($link);
         }
