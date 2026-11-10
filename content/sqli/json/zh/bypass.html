@@ -6,5 +6,5 @@
 <li><b>过滤空格</b>：用 <code>/**/</code>、<code>%09</code>（Tab）、<code>%0a</code>（换行）、括号 <code>()</code> 代替。</li>
 <li><b>过滤注释符</b>：用 <code>or '1'='1</code> 让条件恒真，或用闭合引号后直接堆叠语句。</li>
 <li><b>JSON 转义干扰</b>：服务端若对 JSON 值做 <code>stripslashes</code>，可利用 <code>\\</code> 转义引号制造注入；若不做转义，直接用单引号闭合即可。</li>
-<li><b>数字型 JSON 字段</b>：不带引号直接拼接，如 <code>{"id":1 and (select updatexml(1,concat(0x7e,database()),1))}</code>。</li>
+<li><b>数字型 JSON 字段</b>：不带引号直接拼接，可用 <code>{"id":1 union select 1,1,(select secret from secrets limit 0,1)}</code> 直接带出数据。</li>
 </ul>

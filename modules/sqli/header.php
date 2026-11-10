@@ -12,6 +12,7 @@ $showsql = '';
 $err = '';
 $ua = isset($_SERVER['HTTP_USER_AGENT']) ? $_SERVER['HTTP_USER_AGENT'] : '';
 $xff = isset($_SERVER['HTTP_X_FORWARDED_FOR']) ? $_SERVER['HTTP_X_FORWARDED_FOR'] : '';
+$ref = isset($_SERVER['HTTP_REFERER']) ? $_SERVER['HTTP_REFERER'] : '';
 
 // 靶场故意设计：把 User-Agent 请求头直接拼进 SQL，且回显 MySQL 报错
 // 真实场景多见于"访问日志 / 审计记录"把 UA / X-Forwarded-For 入库的代码
@@ -58,16 +59,19 @@ if (!$res) {
 FIX);
     ?>
     <p class="desc">
-        <?php echo '很多系统会把 <code>User-Agent</code>、<code>X-Forwarded-For</code>、<code>Referer</code> '
-            . '等请求头写进数据库做访问统计或审计，却<b>忘了对请求头做过滤</b>。<br>'
-            . '本关服务端把 <code>User-Agent</code> 请求头直接拼进 SQL，你可以用 Burp 或 curl 修改 UA 来注入。'; ?>
+        <?php echo '真实场景里，访问日志 / 审计功能常把 <code>User-Agent</code>、<code>X-Forwarded-For</code>、'
+            . '<code>Referer</code> 写进数据库，而这些请求头<b>全部由客户端可控</b>。<br>'
+            . '本关服务端把 <code>User-Agent</code> 请求头直接拼进 SQL，用 Burp 或 curl 改 UA 即可注入。<br>'
+            . '页面只回显 <b>3 个字段</b>（ID / 用户名 / 角色）：先用 <code>UNION SELECT</code> 确认列数，'
+            . '再把要查的数据放到回显位上。'; ?>
     </p>
-    <?php level_goal('目标：修改 <code>User-Agent</code> 请求头，注入报错函数，'
-        . '从 MySQL 报错信息中读出 <code>secrets</code> 表的通关凭证。'); ?>
+    <?php level_goal('目标：伪造 <code>User-Agent</code> 请求头，用 <code>UNION</code> 注入把 '
+        . '<code>secrets</code> 表中的通关凭证拼到回显字段上并读出。'); ?>
 
     <div class="result" style="margin-bottom:12px">
         <?php echo '当前 User-Agent：'; ?><code><?php echo htmlspecialchars($ua); ?></code><br>
-        <?php echo '当前 X-Forwarded-For：'; ?><code><?php echo htmlspecialchars($xff ?: '(未设置)'); ?></code>
+        <?php echo '当前 X-Forwarded-For：'; ?><code><?php echo htmlspecialchars($xff ?: '(未设置)'); ?></code><br>
+        <?php echo '当前 Referer：'; ?><code><?php echo htmlspecialchars($ref ?: '(未设置)'); ?></code>
     </div>
 
     <?php sql_toggle_button(); ?>

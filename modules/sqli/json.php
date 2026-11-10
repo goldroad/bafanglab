@@ -109,10 +109,12 @@ FIX);
     <p class="desc">
         <?php echo '这是一个接收 <b>JSON 请求体</b> 的查询接口（<code>Content-Type: application/json</code>），'
             . '服务端把 JSON 里的 <code>username</code> 字段直接拼进 SQL。<br>'
-            . '很多前后端分离项目只校验了表单参数，却忽略了 JSON body 里的字段同样可以注入。'; ?>
+            . '很多前后端分离项目只校验了表单参数，却忽略了 JSON body 里的字段同样可以注入。<br>'
+            . '页面只回显 <b>3 个字段</b>（ID / 用户名 / 角色）：先用 <code>UNION SELECT</code> 确认列数，'
+            . '再把要查的数据放到回显位上。'; ?>
     </p>
-    <?php level_goal('目标：向 JSON body 中的 <code>username</code> 字段注入报错函数，'
-        . '从 MySQL 报错信息中读出 <code>secrets</code> 表的通关凭证。'); ?>
+    <?php level_goal('目标：用 <code>UNION</code> 注入把 <code>secrets</code> 表中的通关凭证'
+        . '拼到回显字段上，从查询结果表格中读出凭证。'); ?>
 
     <?php echo $msg; ?>
 
