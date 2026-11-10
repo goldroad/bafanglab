@@ -61,9 +61,7 @@ FIX);
     <p class="desc">
         <?php echo '真实场景里，访问日志 / 审计功能常把 <code>User-Agent</code>、<code>X-Forwarded-For</code>、'
             . '<code>Referer</code> 写进数据库，而这些请求头<b>全部由客户端可控</b>。<br>'
-            . '本关服务端把 <code>User-Agent</code> 请求头直接拼进 SQL，用 Burp 或 curl 改 UA 即可注入。<br>'
-            . '页面只回显 <b>3 个字段</b>（ID / 用户名 / 角色）：先用 <code>UNION SELECT</code> 确认列数，'
-            . '再把要查的数据放到回显位上。'; ?>
+            . '本关服务端把 <code>User-Agent</code> 请求头直接拼进 SQL，用 Burp 或 curl 改 UA 即可注入。'; ?>
     </p>
     <?php level_goal('目标：伪造 <code>User-Agent</code> 请求头，用 <code>UNION</code> 注入把 '
         . '<code>secrets</code> 表中的通关凭证拼到回显字段上并读出。'); ?>
