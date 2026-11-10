@@ -4,9 +4,8 @@
  * 版权所有：八方网域-无涯
  */
 require_once dirname(dirname(__DIR__)) . '/includes/i18n.php';
-$page_title = 'SQL注入 - JSON 注入';
-require_once dirname(dirname(__DIR__)) . '/includes/header.php';
 require_once dirname(dirname(__DIR__)) . '/includes/db.php';
+require_once dirname(dirname(__DIR__)) . '/includes/levels.php';
 
 $raw = file_get_contents('php://input');
 $showsql = '';
@@ -32,6 +31,48 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $raw !== '') {
 } elseif ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $msg = '<div class="msg fail">' . '请提交 JSON 格式的请求体（Content-Type: application/json）。' . '</div>';
 }
+
+// 结果区 HTML：页面内联输出与 AJAX 片段返回共用，保证两处结构永远一致
+$resultHtml = '';
+if ($showsql !== '') {
+    ob_start();
+    sql_toggle_button();
+    $resultHtml .= ob_get_clean();
+    $resultHtml .= '<div class="result warn" data-sql-panel style="display:none">'
+        . '执行 SQL：' . '<code>' . htmlspecialchars($showsql) . '</code></div>';
+    if ($err !== '') {
+        // 靶场故意设计：直接把 MySQL 报错输出到页面
+        $resultHtml .= '<div class="result error">' . 'MySQL 错误：' . htmlspecialchars($err) . '</div>';
+    } elseif (!empty($rows)) {
+        $resultHtml .= '<div class="result"><table><tr><th>ID</th><th>' . '用户名'
+            . '</th><th>' . '角色' . '</th></tr>';
+        foreach ($rows as $row) {
+            $resultHtml .= '<tr><td>' . (int)$row['id'] . '</td><td>'
+                . htmlspecialchars($row['username']) . '</td><td>'
+                . htmlspecialchars($row['role']) . '</td></tr>';
+        }
+        $resultHtml .= '</table></div>';
+    } else {
+        $resultHtml .= '<div class="result">' . '查询结果：无匹配数据。' . '</div>';
+    }
+}
+if ($resultHtml !== '') {
+    // 外层容器保证「显示SQL语句」按钮与 data-sql-panel 同父，切换逻辑可用
+    $resultHtml = '<div id="jsonResultData">' . $resultHtml . '</div>';
+}
+
+// AJAX 提交：只返回结果片段（不输出整页），前端直接注入结果区
+$isAjax = (isset($_SERVER['HTTP_X_REQUESTED_WITH'])
+        && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest')
+    || (isset($_GET['ajax']) && $_GET['ajax'] === '1');
+if ($isAjax) {
+    header('Content-Type: text/html; charset=UTF-8');
+    echo $resultHtml;
+    exit;
+}
+
+$page_title = 'SQL注入 - JSON 注入';
+require_once dirname(dirname(__DIR__)) . '/includes/header.php';
 ?>
 <a class="back-link" href="<?php echo BASE_URL; ?>/index.php">&larr; <?php echo t('footer.back'); ?></a>
 
@@ -85,39 +126,24 @@ FIX);
         <button class="btn" type="button" onclick="sendJson()"><?php echo '提交查询'; ?></button>
     </form>
 
-    <div id="jsonResult" style="margin-top:12px"></div>
-
-    <?php if ($showsql !== ''): ?>
-        <?php sql_toggle_button(); ?>
-        <div class="result warn" data-sql-panel style="display:none"><?php echo '执行 SQL：'; ?><code><?php echo htmlspecialchars($showsql); ?></code></div>
-        <?php if ($err !== ''): ?>
-            <!-- 靶场故意设计：直接把 MySQL 报错输出到页面 -->
-            <div class="result error"><?php echo 'MySQL 错误：'; ?><?php echo htmlspecialchars($err); ?></div>
-        <?php elseif (!empty($rows)): ?>
-            <div class="result"><table><tr><th>ID</th><th><?php echo '用户名'; ?></th><th><?php echo '角色'; ?></th></tr>
-            <?php foreach ($rows as $row): ?>
-                <tr><td><?php echo (int)$row['id']; ?></td><td><?php echo htmlspecialchars($row['username']); ?></td><td><?php echo htmlspecialchars($row['role']); ?></td></tr>
-            <?php endforeach; ?>
-            </table></div>
-        <?php else: ?>
-            <div class="result"><?php echo '查询结果：无匹配数据。'; ?></div>
-        <?php endif; ?>
-    <?php endif; ?>
+    <div id="jsonResult" style="margin-top:12px"><?php echo $resultHtml; ?></div>
 </div>
 
 <script>
 function sendJson() {
     var body = document.querySelector('#jsonForm textarea').value;
+    var box = document.getElementById('jsonResult');
     var xhr = new XMLHttpRequest();
     xhr.open('POST', '<?php echo BASE_URL; ?>/modules/sqli/json.php', true);
     xhr.setRequestHeader('Content-Type', 'application/json');
+    // 标记为 AJAX 请求：服务端只返回结果片段，避免把整页 HTML 再注入一遍
+    xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
     xhr.onreadystatechange = function () {
-        if (xhr.readyState === 4) {
-            var box = document.getElementById('jsonResult');
-            // 只取响应里的结果片段，避免整页嵌套
-            var doc = new DOMParser().parseFromString(xhr.responseText, 'text/html');
-            var panel = doc.querySelector('.panel');
-            box.innerHTML = panel ? panel.innerHTML : xhr.responseText;
+        if (xhr.readyState !== 4) { return; }
+        if (xhr.status === 200) {
+            box.innerHTML = xhr.responseText;
+        } else {
+            box.innerHTML = '<div class="result error">请求失败（HTTP ' + xhr.status + '）</div>';
         }
     };
     xhr.send(body);
