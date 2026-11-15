@@ -27,9 +27,9 @@ if (isset($_GET['reset'])) {
 
 $expected = '恭喜你完成本关挑战！';
 $step     = isset($_GET['step']) ? (string)$_GET['step'] : '';
-$wVal     = isset($_GET['w']) ? (string)$_GET['w'] : '';
-$rVal     = isset($_GET['r']) ? (string)$_GET['r'] : '';
-$inputVal = ($step === 'read') ? $rVal : $wVal;
+// 注入点统一为 id（与 GET 关保持一致）；step 仅用于区分「写入」「读取」两种执行场景
+$idVal    = isset($_GET['id']) ? (string)$_GET['id'] : '';
+$inputVal = $idVal;
 ?>
 <a class="back-link" href="<?php echo BASE_URL; ?>/index.php">&larr; <?php echo t('footer.back'); ?></a>
 
@@ -82,8 +82,8 @@ FIX);
         <input type="hidden" name="step" value="write">
         <div class="form-row">
             <label><?php echo '写入 · 参数 id（自行构造 INTO OUTFILE payload）'; ?></label>
-            <input type="text" name="w" style="max-width:900px" placeholder="在此粘贴完整的 id 参数值"
-                   value="<?php echo htmlspecialchars($wVal); ?>">
+            <input type="text" name="id" style="max-width:900px" placeholder="在此粘贴完整的 id 参数值"
+                   value="<?php echo htmlspecialchars($idVal); ?>">
         </div>
         <button class="btn" type="submit"><?php echo '执行写入'; ?></button>
     </form>
@@ -92,8 +92,8 @@ FIX);
         <input type="hidden" name="step" value="read">
         <div class="form-row">
             <label><?php echo '读取 · 参数 id（自行构造 LOAD_FILE payload）'; ?></label>
-            <input type="text" name="r" style="max-width:900px" placeholder="在此粘贴完整的 id 参数值"
-                   value="<?php echo htmlspecialchars($rVal); ?>">
+            <input type="text" name="id" style="max-width:900px" placeholder="在此粘贴完整的 id 参数值"
+                   value="<?php echo htmlspecialchars($idVal); ?>">
         </div>
         <button class="btn" type="submit"><?php echo '执行读取'; ?></button>
         <a class="btn btn-plain btn-sm" href="<?php echo BASE_URL; ?>/modules/sqli/outfile.php?reset=1"><?php echo '清理本关写入的文件'; ?></a>
@@ -101,7 +101,9 @@ FIX);
 
     <?php
     $readBuf = '';
-    if ($step !== '' && $inputVal !== '') {
+    // 只要传入了 id 就执行注入语句（与 GET 关一致，便于用 ?id=1 确认注入点）；
+    // step 只决定下方「写入」「读取」的场景提示文案，不再是执行前置条件
+    if ($inputVal !== '') {
         // 靶场故意设计：参数直接拼接进 SQL，无任何过滤（这是本关的漏洞点）
         $sql = "SELECT id, username, email, role FROM users WHERE id = $inputVal"; // @vuln
         sql_toggle_button();
@@ -133,7 +135,9 @@ FIX);
             echo '<div class="result">' . '查询已执行，本次没有返回数据行。' . '<br>'
                 . ($step === 'write'
                     ? '如果 payload 使用了 <code>INTO OUTFILE</code>，说明写入语句已经执行，请查看下面的文件状态。'
-                    : '如果 payload 使用了 <code>LOAD_FILE()</code> 却没有数据，请检查文件路径与转义是否正确。')
+                    : ($step === 'read'
+                        ? '如果 payload 使用了 <code>LOAD_FILE()</code> 却没有数据，请检查文件路径与转义是否正确。'
+                        : '当前只是确认注入点，如需写入文件请用「写入」框，如需读回文件请用「读取」框。'))
                 . '</div>';
         }
     }
